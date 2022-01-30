@@ -33,7 +33,13 @@ pub enum Subcommands {
 pub async fn run_artist(sub : ArtistSubcommands) -> Option<()>{
 
     match sub {
-        ArtistSubcommands::Update { name } => todo!(),
+        ArtistSubcommands::Update { names, ids } => {
+            let client_id = std::env::var("CLIENT_ID").unwrap();
+            let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+            let token = crate::spotify::Token::new(client_id.as_str(), client_secret.as_str()).await.unwrap();
+            let spotify = Spotify::new(&token);
+            run_artist_update(names, ids, &spotify).await
+        },
         ArtistSubcommands::List { all_info, name, id } => {
             run_artist_list(all_info, name, id)
         },
@@ -70,20 +76,50 @@ pub async fn run_artist_add(id : bool, delete : bool, name : String ) -> Option<
         let mut file = OpenOptions::new().create(false).truncate(true).write(true).open(ARTIST_FILE).ok()?;
         names.into_iter().for_each(|n| { 
             let _ = file.write(format!("{}\n", n).as_bytes()); 
-         })
+         });
+         println!("Done")
     }
 
     Some(())
 }
 
+pub async fn run_artist_update(names : Option<Vec<String>>, ids : Option<Vec<String>>, spotify : &Spotify) -> Option<()> {
+    let (mut artists, connection) = ArtistDB::fetch_all().unwrap_or_else(|| panic!("Unable to fetch into the database"));
+    if let Some(name) = names {
+        artists.retain(|artist| name.contains(&artist.artist_name));
+    }
+     if let Some(id) = ids {
+         artists.retain(|artist| id.contains(&artist.artist_spotify_id));
+    }
+    println!();
+    println!("------------------------------");
+    println!("-------- New realease --------");
+    println!("------------------------------");
+    println!("");
+    for artist in artists.iter_mut() {
+        let updated  = artist.update(&spotify, &connection).await;
+        if let Some(updated) = updated {
+            if updated {
+                println!("\n");
+                println!("{}", artist.default_format());
+                (0..3).into_iter().for_each(|_| println!("------------------"));
+            }
+        }else {
+            println!("An error occured for : {}", artist.artist_name)
+        }
+    }
+    println!("Done");
+    Some(())
+}
+
 pub fn run_artist_list(all_info : bool, name : Option<Vec<String>>, id : Option<Vec<String>>) -> Option<()>{
-    let mut artists = ArtistDB::fetch_all()?;
+    let mut artists = ArtistDB::fetch_all()?.0;
     if let Some(name) = name {
        artists.retain(|artist| name.contains(&artist.artist_name));
     }
     if let Some(id) = id {
         artists.retain(|artist| id.contains(&artist.artist_spotify_id));
-     }
+    }
 
      for artist in artists {
          
@@ -131,6 +167,10 @@ pub enum  ArtistSubcommands {
     Update {
         /// Update for a specific artist
         #[clap(short, long)]
-        name : Option<String>
+        names : Option<Vec<String>>,
+
+        /// Update for a specific artist id
+        #[clap(short, long)]
+        ids : Option<Vec<String>>
     }
 }

@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, params, ToSql, types::{ToSqlOutput, Value}};
+use serde::Deserialize;
+
+use crate::spotify::Spotify;
 const DB_PATH : &'static str = "new_song_db.sqlite";
 const FETCH_ALL_QUERY : &'static str = "Select * from artist_table";
 
@@ -17,7 +20,7 @@ pub struct ArtistDB {
 } 
 
 impl ArtistDB {
-    pub fn fetch_all() -> Option<Vec<ArtistDB>>{
+    pub fn fetch_all() -> Option<(Vec<ArtistDB>, Connection)>{
         let connection = Connection::open(DB_PATH).ok()?;
         let mut stmt = connection.prepare(FETCH_ALL_QUERY).ok()?;
         let artists = stmt.query_map([], |r| {
@@ -27,33 +30,67 @@ impl ArtistDB {
                             artist_name : r.get(1)?,
                             artist_spotify_id : r.get(2)?,
                             last_album : r.get(3)?,
-                            last_album_release_date : Date::from_str(r.get(4)?).unwrap(),
+                            last_album_release_date : Date::from_str(&r.get(4)?).unwrap(),
                             last_album_spotify_id : r.get(5)?,
                             last_album_url : r.get(6)?,
                         })
         }).ok()?
         .filter_map(|res| res.ok())
         .collect::<Vec<ArtistDB>>();
-        Some(artists)
+        drop(stmt);
+        Some((artists, connection))
+    }
+
+    pub async fn update(&mut self, spotify : &Spotify, connection : &Connection) -> Option<bool> {
+        let lastest = spotify.artist_lastest_album(self.artist_spotify_id.as_str()).await?;
+        let latest_realease_date = Date::from_str(&lastest.release_date)?;
+        if  latest_realease_date > self.last_album_release_date {
+            self.last_album = lastest.name;
+            self.last_album_spotify_id = lastest.id;
+            self.last_album_release_date = latest_realease_date;
+            self.last_album_url = lastest.external_urls.get("spotify")?.clone();
+            let _ = Self::update_db(self, connection)?;
+            Some(true)
+        }else {
+            Some(false)
+        }
+        
+    }
+
+    pub fn insert_db(artist : &Self, database : &Connection) -> Option<()> {
+        database.execute( "INSERT INTO artist_table 
+        (artist_name, artist_spotify_id, last_album, last_album_release_date, last_album_spotify_id, last_album_url)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+         params![artist.artist_name, artist.artist_spotify_id, artist.last_album, 
+         artist.last_album_release_date, artist.last_album_spotify_id, artist.last_album_url
+         ]).ok()?;
+
+         Some(())
+    }
+    pub fn update_db(artist : &Self, database : &Connection) -> Option<()> {
+        database.execute("UPDATE artist_table SET last_album = ?1, last_album_release_date = ?2, last_album_spotify_id = ?3, last_album_url = ?4 WHERE id = ?5;"
+        , params![artist.last_album, artist.last_album_release_date, artist.last_album_spotify_id, artist.last_album_url, artist.id]).ok()?;
+
+        Some(())
     }
 
     pub fn default_format(&self) -> String {
         let mut s = String::new();
-        s.push_str(format!("***   Artist Name   : {}   ***\n", self.artist_name).as_str());
-        s.push_str(format!("***   Last Album    : {}   ***\n", self.last_album).as_str());
-        s.push_str(format!("***   Realease Date : {}   ***\n", self.last_album_release_date).as_str());
+        s.push_str(format!("***   Artist Name   : {}   \n", self.artist_name).as_str());
+        s.push_str(format!("***   Last Album    : {}   \n", self.last_album).as_str());
+        s.push_str(format!("***   Realease Date : {}   \n", self.last_album_release_date).as_str());
         s
     }
 
     pub fn full_format(&self) -> String {
         let mut s = String::new();
-        s.push_str(format!("***   ID            : {}   ***\n", self.id).as_str());
-        s.push_str(format!("***   Artist Name   : {}   ***\n", self.artist_name).as_str());
-        s.push_str(format!("***   Artist ID     : {}   ***\n", self.artist_spotify_id).as_str());
-        s.push_str(format!("***   Last Album    : {}   ***\n", self.last_album).as_str());
-        s.push_str(format!("***   Last album ID : {}   ***\n", self.artist_name).as_str());
-        s.push_str(format!("***   Realease Date : {}   ***\n", self.last_album_release_date).as_str());
-        s.push_str(format!("***   Album Url     : {}   ***\n", self.last_album_url).as_str());
+        s.push_str(format!("***   ID            : {}   \n", self.id).as_str());
+        s.push_str(format!("***   Artist Name   : {}   \n", self.artist_name).as_str());
+        s.push_str(format!("***   Artist ID     : {}   \n", self.artist_spotify_id).as_str());
+        s.push_str(format!("***   Last Album    : {}   \n", self.last_album).as_str());
+        s.push_str(format!("***   Last album ID : {}   \n", self.artist_name).as_str());
+        s.push_str(format!("***   Realease Date : {}   \n", self.last_album_release_date).as_str());
+        s.push_str(format!("***   Album Url     : {}   \n", self.last_album_url).as_str());
         s
     }
 }
@@ -79,11 +116,25 @@ impl Date {
         }
     }
 
-    pub fn from_str(date : String) -> Option<Self> {
+    pub fn unix_epoch() -> Self {
+        Self {
+            day : 1,
+            month : 1,
+            year : 1970
+        }
+    }
+
+    
+
+    pub fn from_str<'a>(date : &String) -> Option<Self> {
         let date_tuple = date.split("-").collect::<Vec<&str>>();
         let year = date_tuple.get(0)?.parse::<i16>().ok()?;
-        let month = date_tuple.get(1)?.parse::<u8>().ok()?;
-        let day = date_tuple.get(2)?.parse::<u8>().ok()?;
+        let month = date_tuple.get(1).map(|f|  {
+            if f.starts_with("0") { f.strip_prefix("0").unwrap()} else { f }
+        })?.parse::<u8>().ok()?;
+        let day = date_tuple.get(2).map(|f|  {
+            if f.starts_with("0") { f.strip_prefix("0").unwrap()} else { f }
+        })?.parse::<u8>().ok()?;
         Some(Self {
                     year,
                     month,
@@ -108,6 +159,14 @@ impl PartialOrd for Date {
 
 impl Display for Date {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-{}-{}",self.year, self.month, self.day)
+        let fill_month = if self.month < 10 { "0" } else { "" };
+        let fill_day = if self.day < 10 { "0" } else { "" };
+        write!(f, "{}-{}{}-{}{}",self.year, fill_month,self.month, fill_day,self.day)
+    }
+}
+
+impl ToSql for Date {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(Value::Text(self.to_string())))
     }
 }

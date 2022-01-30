@@ -5,6 +5,8 @@ use base64::encode;
 use reqwest::{StatusCode, RequestBuilder};
 use serde_json::Value;
 
+use crate::sql::Date;
+
 pub(crate) async fn get_access_token(client_id: &str, client_secret: &str) -> Option<Token> {
     let creditential = format!("{}:{}", client_id, client_secret);
     let encoded = format!("Basic {}", encode(creditential));
@@ -36,7 +38,7 @@ pub(crate) async fn get_access_token(client_id: &str, client_secret: &str) -> Op
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Token {
+pub struct Token {
     access_token: String,
     token_type: String,
     expire_in: u32,
@@ -73,7 +75,7 @@ impl Token {
     }
 }
 
-pub(crate) struct Spotify {
+pub struct Spotify {
     token: Token,
 }
 
@@ -103,7 +105,7 @@ impl Spotify {
         "https://api.spotify.com/v1/audio-analysis/".into()
     }
 
-    fn create_url(end_point : &String, r_type : &SpotifyRessourceType, spotify_ids : Vec<String>, market : Option<String>, offset : Option<u32>, included_genre : Vec<SpotifyIncludeGroupe>) -> RequestBuilder{
+    fn create_url(end_point : &String, r_type : &SpotifyRessourceType, spotify_ids : Vec<String>, market : Option<String>, limit : Option<u32>, offset : Option<u32>, included_genre : Vec<SpotifyIncludeGroupe>) -> RequestBuilder{
         let ids = if spotify_ids.len() > 1 { let s = String::from("?ids=") + &spotify_ids.join("%2C").to_string(); s } else { spotify_ids.first().unwrap().clone() };
         let base_url = format!("{}{}",end_point, ids);
         let base_url = match r_type {
@@ -121,6 +123,9 @@ impl Spotify {
         if let Some(offset) = offset {
             builder = builder.query(&[("offset", offset)]);
         }
+        if let Some(limit) = limit {
+            builder = builder.query(&[("limit", limit)])
+        }
 
         if !included_genre.is_empty() {
             let genre = included_genre.iter().map( |i| i.to_string()).collect::<Vec<String>>().join(",");
@@ -129,7 +134,7 @@ impl Spotify {
         builder
     }
 
-    fn setup_url_request(&self, r_type : &SpotifyRessourceType, spotify_ids : Vec<String>, market : Option<String>, offset : Option<u32>, included_genre : Vec<SpotifyIncludeGroupe>) -> RequestBuilder {
+    fn setup_url_request(&self, r_type : &SpotifyRessourceType, spotify_ids : Vec<String>, market : Option<String>, limit : Option<u32> ,offset : Option<u32>, included_genre : Vec<SpotifyIncludeGroupe>) -> RequestBuilder {
         let end_point = &match r_type {
             &SpotifyRessourceType::Album | &SpotifyRessourceType::AlbumTrack => Self::album_end_point(),
             &SpotifyRessourceType::Artist | &SpotifyRessourceType::ArtistAlbum | &SpotifyRessourceType::ArtistTopTrack | &SpotifyRessourceType::RelatedArtist => Self::artist_end_point(),
@@ -137,7 +142,7 @@ impl Spotify {
             &SpotifyRessourceType::AudioFeature => Self::audio_feature_end_point(),
             &SpotifyRessourceType::AudioAnalysis => Self::audio_analysis_end_point(),
         };
-        let rb = Self::create_url(end_point, r_type, spotify_ids, market, offset, included_genre);
+        let rb = Self::create_url(end_point, r_type, spotify_ids, market, limit, offset, included_genre);
         let rb = rb.header("Authorization", format!("Bearer {}", self.token.access_token))
         .header("Accept", "application/json")
         .header("Content-Type", "application/json");
@@ -169,24 +174,46 @@ impl Spotify {
         self.setup_search_request(query, item_type, market, limit, offset, include_external).send().await.ok()?.json::<Value>().await.ok()
     }
     pub async fn artist(&self, artist_id : &str) -> Option<Artist> {
-        let rb = self.setup_url_request(&SpotifyRessourceType::Artist, vec![artist_id.into()], None, None, vec![]);
+        let rb = self.setup_url_request(&SpotifyRessourceType::Artist, vec![artist_id.into()], None, None, None, vec![]);
         if let Ok(response ) = rb.send().await {
             response.json::<Artist>().await.ok()
         }else { None } 
     }
 
     pub async fn artists(&self, artist_ids : Vec<String>) -> Option<Vec<Value>> {
-        let rb = self.setup_url_request(&SpotifyRessourceType::Artist, artist_ids, None, None, vec![]);
+        let rb = self.setup_url_request(&SpotifyRessourceType::Artist, artist_ids, None, None, None, vec![]);
         if let Ok(response ) = rb.send().await {
             response.json::<Vec<Value>>().await.ok()
         }else { None } 
     }
+    pub async fn artist_album(&self, artist_id : String, included_genre : Vec<SpotifyIncludeGroupe>, limit : Option<u32>, market : Option<String>, offset : Option<u32>) -> Option<Album> {
+        let rb = self.setup_url_request(&SpotifyRessourceType::ArtistAlbum, vec![artist_id], market, limit, offset, included_genre);
+        if let Ok(response) = rb.send().await {
+            response.json::<Album>().await.ok()
+        }else { None }
+    }
     pub async fn related_artists(&self, artist_ids : Vec<String>) -> Option<Value> {
-        let rb = self.setup_url_request(&SpotifyRessourceType::RelatedArtist, artist_ids, None, None, vec![]);
+        let rb = self.setup_url_request(&SpotifyRessourceType::RelatedArtist, artist_ids, None, None,None, vec![]);
         if let Ok(response ) = rb.send().await {
             Some(response.json::<Value>().await.ok()?)
         }else { None } 
     }
+}
+
+impl Spotify {
+    pub async fn artist_lastest_album(&self, artist_id : &str) -> Option<AlbumItems> {
+        let mut album = self.artist_album(artist_id.into(), vec![
+            SpotifyIncludeGroupe::Album, SpotifyIncludeGroupe::Single
+        ], Some(40), None, Some(0)).await?;
+        album.items.sort_by(|a,b| {
+            let date1 = Date::from_str(&a.release_date).unwrap_or(Date::unix_epoch());
+            let date2 = Date::from_str(&b.release_date).unwrap_or(Date::unix_epoch());
+            date2.partial_cmp(&date1).unwrap()
+        });
+        let items = album.items.remove(0);
+        Some(items)
+    }
+
 }
 
 
@@ -215,8 +242,8 @@ impl Display for SpotifyIncludeGroupe {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             SpotifyIncludeGroupe::Single => "single",
-            SpotifyIncludeGroupe::Album => "appears_on",
-            SpotifyIncludeGroupe::AppearsOn => "album",
+            SpotifyIncludeGroupe::Album => "album",
+            SpotifyIncludeGroupe::AppearsOn => "appears_on",
             SpotifyIncludeGroupe::Compilation => "compilation",
         };
         write!(f, "{}", s)
@@ -257,3 +284,56 @@ pub struct Artist {
     pub (crate) artist_type : String,
     pub (crate) uri : String
 }
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Album {
+    pub ( crate) href : String,
+    pub ( crate) items : Vec<AlbumItems>,
+    pub ( crate) limit: u8,
+    pub ( crate) next : Option<String>,
+    pub ( crate) offset : u8,
+    pub ( crate) previous : Option<String>,
+    pub ( crate) total : u8
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AlbumItems {
+    pub (crate) album_group : String,
+    pub (crate) album_type : String,
+    pub (crate) artists : Vec<Value>,
+    pub (crate) available_markets : Vec<String>,
+    pub (crate) external_urls : HashMap<String, String>,
+    pub (crate) href : String,
+    pub (crate) id : String,
+    pub (crate) images : Vec<HashMap<String, Value>>,
+    pub (crate) name : String,
+    pub (crate) release_date : String,
+    pub (crate) release_date_precision : String,
+    pub (crate) total_tracks : u8,
+    #[serde(rename = "type")]
+    pub (crate) r#type : String,
+    pub (crate) uri : String
+}
+
+
+
+// pub struct AlbumItems {
+//     album_group : String,
+//     album_type : String,
+//     artists : Vec<Value>,
+//     available_markets : String,
+//     external_urls : HashMap<String, String>,
+//     href : String,
+//     id : String,
+//     images : Vec<HashMap<String, Value>>,
+//     name : String,
+//     release_date : String,
+//     release_date_precision : String,
+//     total_tracks : u8,
+//     #[serde(rename = "type")]
+//     r_type : String,
+//     uri : String
+
+// }
