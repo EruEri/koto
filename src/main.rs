@@ -1,7 +1,7 @@
 use std::process::exit;
 
 use clap::StructOpt;
-use command::{Main, run_artist};
+use command::{Main, run_list};
 
 mod spotify;
 mod command;
@@ -40,13 +40,11 @@ async fn main() {
 
     let main = Main::parse();
 
-    match main.artist {
-        None => exit(0),
+    match main.subcommand {
+        None => {println!("NO sub"); exit(0)},
         Some(sub) => {
             match sub {
-                command::Subcommands::Artist { artist_sub } => {
-                    let _ = run_artist(artist_sub).await;
-                },
+                command::Subcommands::List { delete, add, update, full, id } => {let _ = run_list(delete, add, update, full, id).await;},
             }
         },
         
