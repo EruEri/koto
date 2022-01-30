@@ -5,7 +5,7 @@ use std::process::exit;
 use clap::{Parser, Subcommand};
 
 use crate::{
-    spotify::{Spotify, Token},
+    spotify::Spotify,
     sql::ArtistDB,
 };
 
@@ -54,7 +54,6 @@ pub async fn run_list(
     full: bool,
     id: bool,
 ) -> Option<()> {
-    println!("delete : {:?}, add : {:?}, update : {:?}, full : {:?}, id : {:?},", delete, add, update, full, id);
     match (delete, add) {
         (Some(_), Some(_)) => unreachable!("delete and add cant be together in the same time"),
         (None, Some(add)) => run_list_modify(id, false, add).await,
@@ -107,12 +106,27 @@ pub async fn run_list_modify(id: bool, delete: bool, name: String) -> Option<()>
     // };
 
     if !delete {
-        ()
+        let client_id = std::env::var("CLIENT_ID").unwrap();
+        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+        let token = crate::spotify::Token::new(client_id.as_str(), client_secret.as_str()).await.unwrap_or_else(|| panic!("Unable to connect to the api"));
+        let spotify = Spotify::new(&token);
+        let artist = ArtistDB::from_name(&name, id, &spotify).await?;
+        match ArtistDB::insert_db(&artist){
+            Ok(u) => {
+                if u == 1 {
+                    println!("Operation Succesed\n{} added to the database", name);
+                }
+                
+            },
+            Err(e) => {
+                println!("An error occured \n{}", e);
+                return None ;
+            },
+        }
     } else {
         let connection = ArtistDB::open().unwrap_or_else(|| panic!("Unable to open the database"));
         let field = if id { "artist_spotify_id" } else { "artist_name" };
         let sql_string = format!("DELETE FROM artist_table WHERE {} = ?1", field);
-        println!("{}", sql_string);
         match connection.execute(sql_string.as_str(), params![name]){
             Ok(size) => if size == 0 { println!("No artist deleted")} else { println!("{} artist deleted", size)},
             Err(_) => {
@@ -121,11 +135,9 @@ pub async fn run_list_modify(id: bool, delete: bool, name: String) -> Option<()>
             },
         }
         let _ = connection.close();
-
-
-        println!("Done")
     }
 
+    println!("Done");
     Some(())
 }
 

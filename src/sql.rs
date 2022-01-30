@@ -1,8 +1,8 @@
-use std::fmt::Display;
+use std::{fmt::Display, process::exit};
 
 use rusqlite::{Connection, params, ToSql, types::{ToSqlOutput, Value}};
 
-use crate::spotify::Spotify;
+use crate::spotify::{Spotify, SpotifySearchType, SpotifySearchResultItem};
 const DB_PATH : &'static str = "new_song_db.sqlite";
 const FETCH_ALL_QUERY : &'static str = "Select * from artist_table";
 
@@ -33,7 +33,46 @@ impl ArtistDB {
                             last_album_url : lastest_album.external_urls.get("spotify")?.clone()
                         })
         }else {
-            unimplemented!()
+            match  spotify.search(name.as_str(), vec![
+                SpotifySearchType::Artist,
+            ], None, Some(1), Some(0), None).await{
+                None => {
+                    println!("Artist {} not found\nTry with the spotify id", name);
+                    exit(1)
+                },
+                Some(map) => {
+                    let artist = map.get(&crate::spotify::SpotifySearchKey::Artists).unwrap_or_else(|| panic!("Wrong json Response"));
+                    let items = &artist.items;
+                    let mut artists: Vec<(String, String)> =  items.iter().filter_map(|rssri| {
+                    match rssri {
+                            SpotifySearchResultItem::Artist { external_urls: _, 
+                                followers: _, genres: _, href: _, 
+                                id, images: _, name, 
+                                popularity: _, artist_type: _, uri: _ } => {
+                                Some((name.clone(), id.clone()))
+                            },
+                            _ => None
+                        }
+                    }).collect();
+                    let (name, artist_id) = if artists.is_empty() {
+                        println!("No artits found");
+                        exit(1)
+                    }else {
+                        artists.remove(0)
+                    };
+                    let lastest_album = spotify.artist_lastest_album(artist_id.as_str()).await?;
+                    Some(Self {
+                                    id : 0,
+                                    artist_name : name,
+                                    artist_spotify_id : artist_id,
+                                    last_album : lastest_album.name,
+                                    last_album_release_date : Date::from_str(&lastest_album.release_date)?,
+                                    last_album_spotify_id : lastest_album.id,
+                                    last_album_url : lastest_album.external_urls.get("spotify")?.clone()
+                                })
+                },
+                
+            }
         }
     }
 }
@@ -80,15 +119,15 @@ impl ArtistDB {
         
     }
 
-    pub fn insert_db(artist : &Self, database : &Connection) -> Option<()> {
-        database.execute( "INSERT INTO artist_table 
+    pub fn insert_db(artist : &Self) -> Result<usize, rusqlite::Error> {
+        let database = Self::open().unwrap_or_else(|| {println!("Unable to open the database to update"); exit(1)});
+        let result = database.execute( "INSERT INTO artist_table 
         (artist_name, artist_spotify_id, last_album, last_album_release_date, last_album_spotify_id, last_album_url)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
          params![artist.artist_name, artist.artist_spotify_id, artist.last_album, 
          artist.last_album_release_date, artist.last_album_spotify_id, artist.last_album_url
-         ]).ok()?;
-
-         Some(())
+         ]);
+         result
     }
     pub fn update_db(artist : &Self, database : &Connection) -> Option<()> {
         database.execute("UPDATE artist_table SET last_album = ?1, last_album_release_date = ?2, last_album_spotify_id = ?3, last_album_url = ?4 WHERE id = ?5;"

@@ -324,13 +324,13 @@ impl TryFrom<String> for SpotifySearchKey  {
 
 #[derive(Debug, Deserialize)]
 pub struct  SpotifySearchResult {
-    href : String,
-    items : Vec<SpotifySearchResultItem>,
-    limit : u8,
-    next : Option<String>,
-    offset : u32,
-    previous : Option<String>,
-    total : u32
+    pub (crate) href : String,
+    pub (crate) items : Vec<SpotifySearchResultItem>,
+    pub (crate) limit : u8,
+    pub (crate) next : Option<String>,
+    pub (crate) offset : u32,
+    pub (crate) previous : Option<String>,
+    pub (crate) total : u32
 }
 
 #[derive(Debug, Deserialize)]

@@ -11,13 +11,13 @@ mod sql;
 #[tokio::main]
 async fn main() {
     let _ = dotenv::dotenv();
-    let client_id = std::env::var("CLIENT_ID").unwrap();
-    let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-    let token = crate::spotify::Token::new(client_id.as_str(), client_secret.as_str()).await.unwrap();
-    let spotify = spotify::Spotify::new(&token);
-    let search = spotify.search("LiSA", vec![spotify::SpotifySearchType::Track, spotify::SpotifySearchType::Artist], None, Some(10), None, None).await;
-    println!("{:?}", token);
-    println!("{:?}", search);
+    // let client_id = std::env::var("CLIENT_ID").unwrap();
+    // let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+    // let token = crate::spotify::Token::new(client_id.as_str(), client_secret.as_str()).await.unwrap();
+    // let spotify = spotify::Spotify::new(&token);
+    // let search = spotify.search("LiSA", vec![spotify::SpotifySearchType::Track, spotify::SpotifySearchType::Artist], None, Some(10), None, None).await;
+    // println!("{:?}", token);
+    //println!("{:?}", search);
 
 
     let main = Main::parse();
