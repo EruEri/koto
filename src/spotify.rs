@@ -1,4 +1,4 @@
-use std::{fmt::{format, Display}, collections::HashMap};
+use std::{fmt::Display, collections::HashMap};
 use serde::{Deserialize, Serialize};
 
 use base64::encode;
@@ -6,36 +6,6 @@ use reqwest::{StatusCode, RequestBuilder};
 use serde_json::Value;
 
 use crate::sql::Date;
-
-pub(crate) async fn get_access_token(client_id: &str, client_secret: &str) -> Option<Token> {
-    let creditential = format!("{}:{}", client_id, client_secret);
-    let encoded = format!("Basic {}", encode(creditential));
-    let request = reqwest::Client::new()
-        .post("https://accounts.spotify.com/api/token")
-        .header("Authorization", encoded)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body("grant_type=client_credentials")
-        .send()
-        .await;
-    match request {
-        Err(_) => None,
-        Ok(r) => {
-            if r.status() != StatusCode::OK {
-                None
-            } else {
-                let value = r.json::<Value>().await.ok()?;
-                let access_token = value.as_object()?["access_token"].as_str()?.to_string();
-                let token_type = value.as_object()?["token_type"].as_str()?.to_string();
-                let expire_in: u32 = value.as_object()?["expires_in"].as_u64()? as u32;
-                Some(Token {
-                    access_token,
-                    token_type,
-                    expire_in,
-                })
-            }
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -170,8 +140,8 @@ impl Spotify {
         .header("Content-Type", "application/json");  
         builder
     }
-    pub async fn search(&self, query : &str, item_type : Vec<SpotifySearchType>, market : Option<&str>, limit : Option<u32>, offset : Option<u32>, include_external : Option<bool>) -> Option<Value> {
-        self.setup_search_request(query, item_type, market, limit, offset, include_external).send().await.ok()?.json::<Value>().await.ok()
+    pub async fn search(&self, query : &str, item_type : Vec<SpotifySearchType>, market : Option<&str>, limit : Option<u32>, offset : Option<u32>, include_external : Option<bool>) -> Option<HashMap<SpotifySearchKey, SpotifySearchResult>> {
+        self.setup_search_request(query, item_type, market, limit, offset, include_external).send().await.ok()?.json::<HashMap<SpotifySearchKey, SpotifySearchResult>>().await.ok()
     }
     pub async fn artist(&self, artist_id : &str) -> Option<Artist> {
         let rb = self.setup_url_request(&SpotifyRessourceType::Artist, vec![artist_id.into()], None, None, None, vec![]);
@@ -292,9 +262,9 @@ pub struct Album {
     pub ( crate) items : Vec<AlbumItems>,
     pub ( crate) limit: u8,
     pub ( crate) next : Option<String>,
-    pub ( crate) offset : u8,
+    pub ( crate) offset : u32,
     pub ( crate) previous : Option<String>,
-    pub ( crate) total : u8
+    pub ( crate) total : u32
 }
 
 
@@ -317,23 +287,115 @@ pub struct AlbumItems {
     pub (crate) uri : String
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, Hash)]
+#[serde(try_from = "String")]
+pub enum SpotifySearchKey {
+    Tracks,
+    Artists,
+    Albums,
+    Playlists,
+    Shows,
+    Episodes
+}
 
+pub struct SpotifyKeyError;
 
-// pub struct AlbumItems {
-//     album_group : String,
-//     album_type : String,
-//     artists : Vec<Value>,
-//     available_markets : String,
-//     external_urls : HashMap<String, String>,
-//     href : String,
-//     id : String,
-//     images : Vec<HashMap<String, Value>>,
-//     name : String,
-//     release_date : String,
-//     release_date_precision : String,
-//     total_tracks : u8,
-//     #[serde(rename = "type")]
-//     r_type : String,
-//     uri : String
+impl Display for SpotifyKeyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Spotify Error Key")
+    }
+}
 
-// }
+impl TryFrom<String> for SpotifySearchKey  {
+    type Error = SpotifyKeyError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "tracks" => Ok(Self::Tracks),
+            "artists" => Ok(Self::Artists),
+            "albums" => Ok(Self::Albums),
+            "playlists" => Ok(Self::Playlists),
+            "shows" => Ok(Self::Shows),
+            "episodes" => Ok(Self::Episodes),
+            _ => Err(SpotifyKeyError {})
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct  SpotifySearchResult {
+    href : String,
+    items : Vec<SpotifySearchResultItem>,
+    limit : u8,
+    next : Option<String>,
+    offset : u32,
+    previous : Option<String>,
+    total : u32
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum SpotifySearchResultItem {
+    Track {
+        album : SpotifySearchTrackAlbum,
+        artists : Vec<SpotifySearchAlbumArtist>,
+        available_markets : Vec<String>,
+        disc_number : u16,
+        duration_ms : u64,
+        explicit : bool,
+        external_ids : HashMap<String, String>,
+        external_urls : HashMap<String, String>,
+        href : String,
+        id : String,
+        is_local : bool,
+        name : String,
+        popularity : u32,
+        preview_url : Value,
+        track_number : u16,
+        #[serde(rename = "type")]
+        t_type : String,
+        uri : String
+    },
+    Artist {
+        external_urls : HashMap<String, String>,
+        followers : HashMap<String, Value>,
+        genres : Vec<String>,
+        href : String,
+        id : String,
+        images : Vec<HashMap<String, Value>>,
+        name : String,
+        popularity: i32,
+        #[serde(rename = "type")]
+        artist_type : String,
+        uri : String
+    },
+}
+#[derive(Debug, Deserialize)]
+pub struct SpotifySearchTrackAlbum {
+    album_type : String,
+    artists : Vec<SpotifySearchAlbumArtist>,
+    available_markets : Vec<String>,
+    external_urls : HashMap<String, String>,
+    href : String,
+    id : String,
+    images : Vec<HashMap<String, Value>>,
+    name : String,
+    release_date : String,
+    release_date_precision : String,
+    total_tracks : u32,
+    #[serde(rename = "type")]
+    a_type : String,
+    uri : String
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SpotifySearchAlbumArtist {
+    external_urls : HashMap<String, String>,
+    href : String,
+    id : String,
+    name : String,
+    #[serde(rename = "type")]
+    r_type : String,
+    uri : String
+}
+

@@ -1,8 +1,6 @@
 use clap::ArgGroup;
-use std::{
-    fs::OpenOptions,
-    io::{BufRead, BufReader, Seek, SeekFrom, Write},
-};
+use rusqlite::params;
+use std::process::exit;
 
 use clap::{Parser, Subcommand};
 
@@ -11,7 +9,6 @@ use crate::{
     sql::ArtistDB,
 };
 
-const ARTIST_FILE: &'static str = "/Users/ndiaye/Documents/Lang/Rust/Cargo/exec/new_song/.artists";
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -22,7 +19,7 @@ pub struct Main {
 
 #[derive(Subcommand)]
 pub enum Subcommands {
-    /// Add an artist to artist list
+    /// List the followed artists
     #[clap(group(
         ArgGroup::new("opt")
         .required(false)
@@ -41,6 +38,7 @@ pub enum Subcommands {
         #[clap(short, long)]
         update: Option<Option<String>>,
 
+        /// Display all the artist information
         #[clap(short, long)]
         full: bool,
         /// Filter with selected spotify id
@@ -59,8 +57,8 @@ pub async fn run_list(
     println!("delete : {:?}, add : {:?}, update : {:?}, full : {:?}, id : {:?},", delete, add, update, full, id);
     match (delete, add) {
         (Some(_), Some(_)) => unreachable!("delete and add cant be together in the same time"),
-        (None, Some(add)) => run_list_add(id, false, add).await,
-        (Some(delete), None) => run_list_add(id, true, delete).await,
+        (None, Some(add)) => run_list_modify(id, false, add).await,
+        (Some(delete), None) => run_list_modify(id, true, delete).await,
         (None, None) => match update {
             None => run_list_show(full, None, false),
             Some(artist_opt) => run_list_update(artist_opt.map(|art| vec![art]), id).await,
@@ -94,61 +92,37 @@ pub async fn run_list(
 
 // }
 
-pub async fn run_list_add(id: bool, delete: bool, name: String) -> Option<()> {
-    let name = if id {
-        let client_id = std::env::var("CLIENT_ID").unwrap();
-        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-        let token = Token::new(client_id.as_str(), client_secret.as_str())
-            .await
-            .unwrap();
-        let spotify = Spotify::new(&token);
-        let artist = spotify.artist(name.as_str()).await?;
-        artist.name
-    } else {
-        name
-    };
-    let file = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(ARTIST_FILE)
-        .ok()?;
+pub async fn run_list_modify(id: bool, delete: bool, name: String) -> Option<()> {
+    // let name = if id {
+    //     let client_id = std::env::var("CLIENT_ID").unwrap();
+    //     let client_secret = std::env::var("CLIENT_SECRET").unwrap();
+    //     let token = Token::new(client_id.as_str(), client_secret.as_str())
+    //         .await
+    //         .unwrap();
+    //     let spotify = Spotify::new(&token);
+    //     let artist = spotify.artist(name.as_str()).await?;
+    //     artist.name
+    // } else {
+    //     name
+    // };
 
     if !delete {
-        let reader = BufReader::new(file);
-        let names = reader
-            .lines()
-            .filter_map(|n| n.ok())
-            .collect::<Vec<String>>();
-        if names.contains(&name) {
-            println!("{} : Already exist", name);
-            return None;
-        }
-        let mut file = OpenOptions::new()
-            .create(false)
-            .write(true)
-            .open(ARTIST_FILE)
-            .ok()?;
-        file.seek(SeekFrom::End(0)).ok()?;
-        file.write(name.as_bytes()).ok()?;
-        file.write("\n".as_bytes()).ok()?;
+        ()
     } else {
-        let reader = BufReader::new(file);
-        let mut names = reader
-            .lines()
-            .filter_map(|n| n.ok())
-            .collect::<Vec<String>>();
-        names.retain(|fname| fname != &name);
-        let mut file = OpenOptions::new()
-            .create(false)
-            .truncate(true)
-            .write(true)
-            .open(ARTIST_FILE)
-            .ok()?;
-        names.into_iter().for_each(|n| {
-            let _ = file.write(format!("{}\n", n).as_bytes());
-        });
+        let connection = ArtistDB::open().unwrap_or_else(|| panic!("Unable to open the database"));
+        let field = if id { "artist_spotify_id" } else { "artist_name" };
+        let sql_string = format!("DELETE FROM artist_table WHERE {} = ?1", field);
+        println!("{}", sql_string);
+        match connection.execute(sql_string.as_str(), params![name]){
+            Ok(size) => if size == 0 { println!("No artist deleted")} else { println!("{} artist deleted", size)},
+            Err(_) => {
+                println!("An error Occurred"); 
+                exit(1)
+            },
+        }
+        let _ = connection.close();
+
+
         println!("Done")
     }
 

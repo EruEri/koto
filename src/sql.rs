@@ -16,7 +16,27 @@ pub struct ArtistDB {
     pub (crate) last_album_release_date : Date,
     pub (crate) last_album_spotify_id : String,
     pub (crate) last_album_url : String,
-} 
+}
+
+impl ArtistDB {
+    pub async fn from_name(name : &String, id : bool, spotify : &Spotify) -> Option<Self> {
+        if id {
+            let artist = spotify.artist(name).await?;
+            let lastest_album = spotify.artist_lastest_album(artist.id.as_str()).await?;
+            Some(Self {
+                            id : 0,
+                            artist_name : artist.name,
+                            artist_spotify_id : artist.id,
+                            last_album : lastest_album.name,
+                            last_album_release_date : Date::from_str(&lastest_album.release_date)?,
+                            last_album_spotify_id : lastest_album.id,
+                            last_album_url : lastest_album.external_urls.get("spotify")?.clone()
+                        })
+        }else {
+            unimplemented!()
+        }
+    }
+}
 
 impl ArtistDB {
     pub fn fetch_all() -> Option<(Vec<ArtistDB>, Connection)>{
@@ -38,6 +58,10 @@ impl ArtistDB {
         .collect::<Vec<ArtistDB>>();
         drop(stmt);
         Some((artists, connection))
+    }
+
+    pub fn open() -> Option<Connection> {
+        Connection::open("new_song_db_copie.sqlite").ok()
     }
 
     pub async fn update(&mut self, spotify : &Spotify, connection : &Connection) -> Option<bool> {
