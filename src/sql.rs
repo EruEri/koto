@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use rusqlite::{Connection, params, ToSql, types::{ToSqlOutput, Value}};
-use serde::Deserialize;
 
 use crate::spotify::Spotify;
 const DB_PATH : &'static str = "new_song_db.sqlite";
