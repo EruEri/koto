@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rusqlite::Connection;
 const DB_PATH : &'static str = "new_song_db.sqlite";
 const FETCH_ALL_QUERY : &'static str = "Select * from artist_table";
@@ -5,20 +7,19 @@ const FETCH_ALL_QUERY : &'static str = "Select * from artist_table";
 
 #[derive(Debug)]
 pub struct ArtistDB {
-    id : u32,
-    artist_name : String,
-    artist_spotify_id : String,
-    last_album : String,
-    last_album_release_date : Date,
-    last_album_spotify_id : String,
-    last_album_url : String,
+    pub (crate) id : u32,
+    pub (crate) artist_name : String,
+    pub (crate) artist_spotify_id : String,
+    pub (crate) last_album : String,
+    pub (crate) last_album_release_date : Date,
+    pub (crate) last_album_spotify_id : String,
+    pub (crate) last_album_url : String,
 } 
 
 impl ArtistDB {
     pub fn fetch_all() -> Option<Vec<ArtistDB>>{
         let connection = Connection::open(DB_PATH).ok()?;
         let mut stmt = connection.prepare(FETCH_ALL_QUERY).ok()?;
-        println!("smrmr");
         let artists = stmt.query_map([], |r| {
             
             Ok(ArtistDB {
@@ -34,6 +35,26 @@ impl ArtistDB {
         .filter_map(|res| res.ok())
         .collect::<Vec<ArtistDB>>();
         Some(artists)
+    }
+
+    pub fn default_format(&self) -> String {
+        let mut s = String::new();
+        s.push_str(format!("***   Artist Name   : {}   ***\n", self.artist_name).as_str());
+        s.push_str(format!("***   Last Album    : {}   ***\n", self.last_album).as_str());
+        s.push_str(format!("***   Realease Date : {}   ***\n", self.last_album_release_date).as_str());
+        s
+    }
+
+    pub fn full_format(&self) -> String {
+        let mut s = String::new();
+        s.push_str(format!("***   ID            : {}   ***\n", self.id).as_str());
+        s.push_str(format!("***   Artist Name   : {}   ***\n", self.artist_name).as_str());
+        s.push_str(format!("***   Artist ID     : {}   ***\n", self.artist_spotify_id).as_str());
+        s.push_str(format!("***   Last Album    : {}   ***\n", self.last_album).as_str());
+        s.push_str(format!("***   Last album ID : {}   ***\n", self.artist_name).as_str());
+        s.push_str(format!("***   Realease Date : {}   ***\n", self.last_album_release_date).as_str());
+        s.push_str(format!("***   Album Url     : {}   ***\n", self.last_album_url).as_str());
+        s
     }
 }
 
@@ -82,5 +103,11 @@ impl PartialOrd for Date {
         }else {
             Some(self.year.cmp(&other.year))
         }
+    }
+}
+
+impl Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}-{}",self.year, self.month, self.day)
     }
 }

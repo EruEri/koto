@@ -22,11 +22,6 @@ async fn main() {
 
     // let artist = spotify.artist("5pjjlQXYjoMFWdjdKOre9s").await;
     // println!("{:?}", artist);
-    let artists = ArtistDB::fetch_all().unwrap();
-
-    for artist in artists {
-        println!("artist : {:?}", artist)
-    }
 
 
     let main = Main::parse();
@@ -35,8 +30,8 @@ async fn main() {
         None => exit(0),
         Some(sub) => {
             match sub {
-                command::Subcommands::Artist { id, delete, name, artist_sub } => {
-                    let _ = run_artist(id, delete, name, artist_sub).await;
+                command::Subcommands::Artist { artist_sub } => {
+                    let _ = run_artist(artist_sub).await;
                 },
             }
         },
