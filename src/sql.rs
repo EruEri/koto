@@ -1,10 +1,17 @@
-use std::{fmt::Display, process::exit};
+use std::{fmt::Display, process::exit, path::PathBuf};
 
 use rusqlite::{Connection, params, ToSql, types::{ToSqlOutput, Value}};
 
-use crate::spotify::{Spotify, SpotifySearchType, SpotifySearchResultItem};
-const DB_PATH : &'static str = "new_song_db.sqlite";
+use crate::{spotify::{Spotify, SpotifySearchType, SpotifySearchResultItem}, home_dir};
+const DB_NAME : &'static str = "new_song_db.sqlite";
 const FETCH_ALL_QUERY : &'static str = "Select * from artist_table";
+
+pub fn database_path() -> String {
+    let mut pathbuf = PathBuf::from(home_dir().to_str().unwrap());
+    pathbuf.push(".koto");
+    pathbuf.push(DB_NAME);
+    pathbuf.to_str().unwrap().to_string()
+}
 
 
 #[derive(Debug)]
@@ -79,7 +86,7 @@ impl ArtistDB {
 
 impl ArtistDB {
     pub fn fetch_all() -> Option<(Vec<ArtistDB>, Connection)>{
-        let connection = Connection::open(DB_PATH).ok()?;
+        let connection = Connection::open(database_path()).ok()?;
         let mut stmt = connection.prepare(FETCH_ALL_QUERY).ok()?;
         let artists = stmt.query_map([], |r| {
             
@@ -100,7 +107,7 @@ impl ArtistDB {
     }
 
     pub fn open() -> Option<Connection> {
-        Connection::open("new_song_db_copie.sqlite").ok()
+        Connection::open(database_path()).ok()
     }
 
     pub async fn update(&mut self, spotify : &Spotify, connection : &Connection) -> Option<bool> {
@@ -232,3 +239,4 @@ impl ToSql for Date {
         Ok(ToSqlOutput::Owned(Value::Text(self.to_string())))
     }
 }
+
