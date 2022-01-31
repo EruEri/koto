@@ -3,10 +3,10 @@ use std::process::Command;
 fn main(){
     let out_dir = "src/C/object";
 
-    let status = Command::new("clang")
+    let status = Command::new("cc")
     .args(vec!["-c", "src/C/date/date.c", "-o", format!("{}/date.o", out_dir).as_str()])
     .status();
-    let status = Command::new("clang")
+    let status = Command::new("cc")
     .args(vec!["-c", "src/C/dir/dir.c", "-o", format!("{}/dir.o", out_dir).as_str()])
     .status();
     println!("Status : {:?}", status);
