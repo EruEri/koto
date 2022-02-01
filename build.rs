@@ -3,7 +3,7 @@ use std::process::Command;
 fn main(){
     let out_dir = "src/C/object";
 
-    let status = Command::new("cc")
+    let _ = Command::new("cc")
     .args(vec!["-c", "src/C/date/date.c", "-o", format!("{}/date.o", out_dir).as_str()])
     .status();
     let status = Command::new("cc")

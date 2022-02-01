@@ -195,7 +195,7 @@ impl Date {
 
     
 
-    pub fn from_str<'a>(date : &String) -> Option<Self> {
+    pub fn from_str(date : &String) -> Option<Self> {
         let date_tuple = date.split("-").collect::<Vec<&str>>();
         let year = date_tuple.get(0)?.parse::<i16>().ok()?;
         let month = date_tuple.get(1).map(|f|  {

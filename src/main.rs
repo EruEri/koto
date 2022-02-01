@@ -1,7 +1,7 @@
 use std::{process::exit, os::raw::c_char, ffi::CStr, path::PathBuf};
 
 use clap::StructOpt;
-use command::{Main, run_list};
+use command::{Main, run_list, run_search};
 
 mod spotify;
 mod command;
@@ -24,6 +24,7 @@ async fn main() {
         Some(sub) => {
             match sub {
                 command::Subcommands::List { delete, add, update, full, id } => {let _ = run_list(delete, add, update, full, id).await;},
+                command::Subcommands::Search { artist, album, track, limit ,market ,item, } => {let _ = run_search(artist, album, track, limit, market, item).await; },
             }
         },
         

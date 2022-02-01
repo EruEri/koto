@@ -5,7 +5,7 @@ use std::process::exit;
 use clap::{Parser, Subcommand};
 
 use crate::{
-    spotify::Spotify,
+    spotify::{Spotify, SpotifySearchType},
     sql::ArtistDB,
 };
 
@@ -45,6 +45,29 @@ pub enum Subcommands {
         #[clap(short, long)]
         id: bool,
     },
+    /// Search of an item
+    Search {
+        /// search for an artist
+        #[clap(short, long)]
+        artist : bool,
+        /// search for an album
+        #[clap(short = 'b', long)]
+        album : bool,
+        /// search for an track
+        #[clap(short, long)]
+        track : bool,
+
+        /// limit the result
+        #[clap(long)]
+        limit : Option<u8>,
+
+        /// market to look for
+        #[clap(long)]
+        market : Option<String>,
+
+        /// search item
+        item : String
+    }
 }
 
 pub async fn run_list(
@@ -65,51 +88,9 @@ pub async fn run_list(
     }
 }
 
-// #[derive(Clone, Copy, ArgEnum)]
-// pub enum ArtistFlag {
-//     Delete,
-//     List
-// }
-
-// pub async fn run_artist(sub : ArtistSubcommands) -> Option<()>{
-
-//     match sub {
-//         ArtistSubcommands::Update { names, ids } => {
-//             let client_id = std::env::var("CLIENT_ID").unwrap();
-//             let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-//             let token = crate::spotify::Token::new(client_id.as_str(), client_secret.as_str()).await.unwrap();
-//             let spotify = Spotify::new(&token);
-//             run_artist_update(names, ids, &spotify).await
-//         },
-//         ArtistSubcommands::List { all_info, name, id } => {
-//             run_artist_list(all_info, name, id)
-//         },
-//         ArtistSubcommands::Add { id, delete, name } => {
-//             run_list_add(id, delete, name).await
-//         },
-//     }
-
-// }
-
 pub async fn run_list_modify(id: bool, delete: bool, name: String) -> Option<()> {
-    // let name = if id {
-    //     let client_id = std::env::var("CLIENT_ID").unwrap();
-    //     let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-    //     let token = Token::new(client_id.as_str(), client_secret.as_str())
-    //         .await
-    //         .unwrap();
-    //     let spotify = Spotify::new(&token);
-    //     let artist = spotify.artist(name.as_str()).await?;
-    //     artist.name
-    // } else {
-    //     name
-    // };
-
     if !delete {
-        let client_id = std::env::var("CLIENT_ID").unwrap();
-        let client_secret = std::env::var("CLIENT_SECRET").unwrap();
-        let token = crate::spotify::Token::new(client_id.as_str(), client_secret.as_str()).await.unwrap_or_else(|| panic!("Unable to connect to the api"));
-        let spotify = Spotify::new(&token);
+        let spotify = Spotify::init().await;
         let artist = ArtistDB::from_name(&name, id, &spotify).await?;
         match ArtistDB::insert_db(&artist){
             Ok(u) => {
@@ -212,43 +193,23 @@ pub fn run_list_show(
 
     Some(())
 }
+// ------------------------ Search ------------------------ \\
 
-// #[derive(Subcommand)]
+pub async fn run_search(artist : bool, album : bool, track : bool, limit : Option<u8>, market : Option<String>, item : String) -> Option<()> {
+    let mut ressource_types = vec![];
+    if artist { ressource_types.push(SpotifySearchType::Artist)}
+    if track { ressource_types.push(SpotifySearchType::Track)}
+    if album { ressource_types.push(SpotifySearchType::Album)}
+    let spotify = Spotify::init().await;
+    let result = spotify.search(item.as_str(), ressource_types, market, limit.map(|l| l as u32), None, None).await?;
+    result.iter().for_each(|(_,v)| {
+        if v.items.is_empty() {
+            println!("\n****   No Result   ****\n")
+        }else {
+            println!("{}", v.default_format());
+        }
+    });
+    //println!("{:?}", result);
 
-// pub enum ArtistSubcommands {
-//     /// Display all the artists
-//     List {
-//         /// Show all the information about the artist
-//         #[clap(short, long)]
-//         all_info: bool,
-
-//         /// Filter with selected name
-//         #[clap(short, long)]
-//         name: Option<Vec<String>>,
-
-//         /// Filter with selected spotify id
-//         #[clap(short, long)]
-//         id: Option<Vec<String>>,
-//     },
-//     /// Add or Remove artist from the list
-//     Add {
-//         /// Find an artist with spotify id
-//         #[clap(short, long)]
-//         id: bool,
-//         /// Delete an artist to the list
-//         #[clap(short, long)]
-//         delete: bool,
-
-//         name: String,
-//     },
-//     /// Update the artist lastest song
-//     Update {
-//         /// Update for a specific artist
-//         #[clap(short, long)]
-//         names: Option<Vec<String>>,
-
-//         /// Update for a specific artist id
-//         #[clap(short, long)]
-//         ids: Option<Vec<String>>,
-//     },
-// }
+    Some(())
+}
