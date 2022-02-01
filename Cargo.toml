@@ -15,3 +15,4 @@ base64 = "0.13.0"
 tokio = {version = "1.14.0", features = ["full"] }
 clap = {version = "3.0.10", features=["derive"]} 
 rusqlite = "0.26.3"
+serde_with = "1.11.0"

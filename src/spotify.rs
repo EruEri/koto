@@ -406,8 +406,8 @@ pub struct AlbumItems {
     pub(crate) album_group: String,
     pub(crate) album_type: String,
     pub(crate) artists: Vec<Value>,
-    #[serde(skip_deserializing)]
-    pub(crate) available_markets: Vec<String>,
+    #[serde(default, with = "serde_with::rust::double_option",)]
+    pub(crate) available_markets: Option<Option<Vec<String>>>,
     pub(crate) external_urls: HashMap<String, String>,
     pub(crate) href: String,
     pub(crate) id: String,
@@ -473,7 +473,8 @@ pub enum SpotifySearchResultItem {
     Track {
         album: SpotifySearchTrackAlbum,
         artists: Vec<SpotifySearchAlbumArtist>,
-        available_markets: Vec<String>,
+        #[serde(default, with = "serde_with::rust::double_option",)]
+        available_markets: Option<Option<Vec<String>>>,
         disc_number: u16,
         duration_ms: u64,
         explicit: bool,
@@ -508,7 +509,8 @@ pub enum SpotifySearchResultItem {
 pub struct SpotifySearchTrackAlbum {
     album_type: String,
     artists: Vec<SpotifySearchAlbumArtist>,
-    available_markets: Vec<String>,
+    #[serde(default, with = "serde_with::rust::double_option",)]
+    available_markets: Option<Option<Vec<String>>>,
     external_urls: HashMap<String, String>,
     href: String,
     id: String,
