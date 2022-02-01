@@ -24,7 +24,7 @@ async fn main() {
         Some(sub) => {
             match sub {
                 command::Subcommands::List { delete, add, update, full, id } => {let _ = run_list(delete, add, update, full, id).await;},
-                command::Subcommands::Search { artist, album, track, limit ,market ,item, } => {let _ = run_search(artist, album, track, limit, market, item).await; },
+                command::Subcommands::Search { artist, album, track, market, limit, offset, item } => {let _ = run_search(artist, album, track, market, limit, offset, item).await; },
             }
         },
         

@@ -175,10 +175,12 @@ pub struct Date {
 
 
 extern "C" {
+    #[allow(dead_code)]
     fn date_now() -> Date;
 }
 
 impl Date {
+    #[allow(dead_code)]
     pub fn date_now() -> Self {
         unsafe {
             date_now()

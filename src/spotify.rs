@@ -173,7 +173,7 @@ impl Spotify {
         query: &str,
         item_type: Vec<SpotifySearchType>,
         market: Option<String>,
-        limit: Option<u32>,
+        limit: Option<u8>,
         offset: Option<u32>,
         include_external: Option<bool>,
     ) -> RequestBuilder {
@@ -211,7 +211,7 @@ impl Spotify {
         query: &str,
         item_type: Vec<SpotifySearchType>,
         market: Option<String>,
-        limit: Option<u32>,
+        limit: Option<u8>,
         offset: Option<u32>,
         include_external: Option<bool>,
     ) -> Option<HashMap<SpotifySearchKey, SpotifySearchResult>> {
@@ -250,7 +250,7 @@ impl Spotify {
         }
     }
 
-    pub async fn artists(&self, artist_ids: Vec<String>) -> Option<Vec<Value>> {
+    pub async fn _artists(&self, artist_ids: Vec<String>) -> Option<Vec<Value>> {
         let rb = self.setup_url_request(
             &SpotifyRessourceType::Artist,
             artist_ids,
@@ -406,7 +406,7 @@ pub struct AlbumItems {
     pub(crate) album_group: String,
     pub(crate) album_type: String,
     pub(crate) artists: Vec<Value>,
-    #[serde(default, with = "serde_with::rust::double_option",)]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) available_markets: Option<Option<Vec<String>>>,
     pub(crate) external_urls: HashMap<String, String>,
     pub(crate) href: String,
@@ -473,7 +473,7 @@ pub enum SpotifySearchResultItem {
     Track {
         album: SpotifySearchTrackAlbum,
         artists: Vec<SpotifySearchAlbumArtist>,
-        #[serde(default, with = "serde_with::rust::double_option",)]
+        #[serde(default, with = "serde_with::rust::double_option")]
         available_markets: Option<Option<Vec<String>>>,
         disc_number: u16,
         duration_ms: u64,
@@ -504,12 +504,29 @@ pub enum SpotifySearchResultItem {
         artist_type: String,
         uri: String,
     },
+    Album {
+        album_type: String,
+        artists: Vec<SpotifySearchAlbumArtist>,
+        external_urls: HashMap<String, String>,
+        #[serde(default, with = "serde_with::rust::double_option")]
+        available_markets: Option<Option<Vec<String>>>,
+        href: String,
+        id: String,
+        images: Vec<HashMap<String, Value>>,
+        name: String,
+        release_date: String,
+        release_date_precision: String,
+        total_tracks: u32,
+        #[serde(rename = "type")]
+        a_type: String,
+        uri: String,
+    },
 }
 #[derive(Debug, Deserialize)]
 pub struct SpotifySearchTrackAlbum {
     album_type: String,
     artists: Vec<SpotifySearchAlbumArtist>,
-    #[serde(default, with = "serde_with::rust::double_option",)]
+    #[serde(default, with = "serde_with::rust::double_option")]
     available_markets: Option<Option<Vec<String>>>,
     external_urls: HashMap<String, String>,
     href: String,
@@ -538,10 +555,13 @@ pub struct SpotifySearchAlbumArtist {
 impl SpotifySearchResultItem {
     pub fn default_format(&self) -> String {
         let mut s = String::new();
+        s.push('\n');
+        s.push('\n');
+        s.push('\n');
         match self {
             SpotifySearchResultItem::Track {
                 album,
-                artists ,
+                artists,
                 available_markets: _,
                 disc_number: _,
                 duration_ms: _,
@@ -558,26 +578,33 @@ impl SpotifySearchResultItem {
                 t_type: _,
                 uri: _,
             } => {
-                s.push('\n');
-                s.push('\n');
-                s.push('\n');
                 s.push_str(format!("****   Song Name   : {}\n", name).as_str());
                 s.push_str(format!("****   Song ID     : {}\n", id).as_str());
-                let mut couples = artists.iter().map(|artist| {
-                   (artist.name.clone(), artist.id.clone())
-                }).collect::<Vec<_>>();
+                let mut couples = artists
+                    .iter()
+                    .map(|artist| (artist.name.clone(), artist.id.clone()))
+                    .collect::<Vec<_>>();
                 let couple_total = couples.len();
                 let (name, id) = couples.remove(0);
-                s.push_str(format!("****   Artist{}      : {}  := ID : {}\n", if couple_total > 1 {"s"}else {""}, name, id).as_str());
+                s.push_str(
+                    format!(
+                        "****   Artist{}      : {}  := ID : {}\n",
+                        if couple_total > 1 { "s" } else { "" },
+                        name,
+                        id
+                    )
+                    .as_str(),
+                );
                 couples.iter().for_each(|(s_name, s_id)| {
-                s.push_str(format!("                     : {}  := ID : {}\n", s_name, s_id).as_str())
+                    s.push_str(
+                        format!("                     : {}  := ID : {}\n", s_name, s_id).as_str(),
+                    )
                 });
                 s.push_str(format!("****   Album       : {}\n", album.name.clone()).as_str());
                 s.push('\n');
-                
-            },
+            }
             SpotifySearchResultItem::Artist {
-                external_urls : _,
+                external_urls: _,
                 followers: _,
                 genres,
                 href: _,
@@ -588,14 +615,50 @@ impl SpotifySearchResultItem {
                 artist_type: _,
                 uri: _,
             } => {
+
+                s.push_str(format!("****   Artist Name   : {}\n", name).as_str());
+                s.push_str(format!("****   Artist ID     : {}\n", id).as_str());
+                let genres = genres.join("\n                     : ");
+                s.push_str(format!("****   Genre         : {}\n", genres).as_str());
                 s.push('\n');
-                s.push('\n');
-                s.push('\n');
-                s.push_str(format!("****   Artist Name : {}\n", name).as_str());
-                s.push_str(format!("****   Artist ID   : {}\n", id).as_str());
-                let genres = genres.join("\n                   : ");
-                s.push_str(format!("****   Genre       : {}\n", genres).as_str());
-                s.push('\n');
+            }
+            SpotifySearchResultItem::Album {
+                album_type,
+                artists,
+                external_urls: _,
+                available_markets: _,
+                href: _,
+                id,
+                images: _,
+                name,
+                release_date,
+                release_date_precision: _,
+                total_tracks,
+                a_type: _,
+                uri: _,
+            } => {
+                s.push_str(format!("****   Album Name    : {}\n", name).as_str());
+                s.push_str(format!("****   Album ID      : {}\n", id).as_str());
+                let mut couples = artists
+                    .iter()
+                    .map(|artist| (artist.name.clone(), artist.id.clone()))
+                    .collect::<Vec<_>>();
+                let couple_total = couples.len();
+                let (name, id) = couples.remove(0);
+                s.push_str(
+                    format!(
+                        "****   Artist{}       {}: {}  := ID : {}\n",
+                        if couple_total > 1 { "s" } else { "" },
+                        if couple_total > 1 { "" } else { " "}
+                        ,
+                        name,
+                        id
+                    )
+                    .as_str(),
+                );
+                s.push_str(format!("****   Release Date  : {}\n", release_date).as_str());
+                s.push_str(format!("****   Total Tracks  : {}\n", total_tracks).as_str());
+                s.push_str(format!("****   Album Type    : {}\n", album_type).as_str());
             },
         }
         s
@@ -608,12 +671,12 @@ impl SpotifySearchResult {
 
         s.push('\n');
         s.push('\n');
-        let mut section_track  = true;
+        let mut section_track = true;
         let mut section_artist = true;
-        let mut section_album  = true;
+        let mut section_album = true;
         self.items.iter().for_each(|i| {
             match i {
-                SpotifySearchResultItem::Track { .. } => { 
+                SpotifySearchResultItem::Track { .. } => {
                     if section_track {
                         s.push_str("-------------------------------\n");
                         s.push_str("-------------------------------\n");
@@ -622,14 +685,24 @@ impl SpotifySearchResult {
                         s.push_str("-------------------------------\n");
                         s.push('\n');
                         s.push('\n');
-                        s.push_str(format!("------ Number of items :  {}   -------\n", self.total).as_str());
-                        s.push_str(format!("------ Result limit    :  {}   -------\n", self.limit).as_str());
+                        s.push_str(
+                            format!("------ Number of items :  {}   -------\n", self.total)
+                                .as_str(),
+                        );
+                        s.push_str(
+                            format!("------ Result limit    :  {}   -------\n", self.limit)
+                                .as_str(),
+                        );
+                        s.push_str(
+                            format!("------ Result offset   :  {}   -------\n", self.offset)
+                                .as_str(),
+                        );
                         s.push('\n');
                         section_track = false;
                         section_artist = true;
                         section_album = true;
                     }
-                },
+                }
                 SpotifySearchResultItem::Artist { .. } => {
                     if section_artist {
                         s.push_str("-------------------------------\n");
@@ -639,15 +712,53 @@ impl SpotifySearchResult {
                         s.push_str("-------------------------------\n");
                         s.push('\n');
                         s.push('\n');
-                        s.push_str(format!("------ Number of items :  {}   -------\n", self.total).as_str());
-                        s.push_str(format!("------ Result limit    :  {}   -------\n", self.limit).as_str());
+                        s.push_str(
+                            format!("------ Number of items :  {}   -------\n", self.total)
+                                .as_str(),
+                        );
+                        s.push_str(
+                            format!("------ Result limit    :  {}   -------\n", self.limit)
+                                .as_str(),
+                        );
+                        s.push_str(
+                            format!("------ Result offset   :  {}   -------\n", self.offset)
+                                .as_str(),
+                        );
                         s.push('\n');
 
                         section_track = true;
                         section_artist = false;
                         section_album = true;
                     }
-                },
+                }
+                &SpotifySearchResultItem::Album { .. } => {
+                    if section_album {
+                        s.push_str("-------------------------------\n");
+                        s.push_str("-------------------------------\n");
+                        s.push_str("------------ Albums -----------\n");
+                        s.push_str("-------------------------------\n");
+                        s.push_str("-------------------------------\n");
+                        s.push('\n');
+                        s.push('\n');
+                        s.push_str(
+                            format!("------ Number of items :  {}   -------\n", self.total)
+                                .as_str(),
+                        );
+                        s.push_str(
+                            format!("------ Result limit    :  {}   -------\n", self.limit)
+                                .as_str(),
+                        );
+                        s.push_str(
+                            format!("------ Result offset   :  {}   -------\n", self.offset)
+                                .as_str(),
+                        );
+                        s.push('\n');
+
+                        section_track = true;
+                        section_artist = true;
+                        section_album = false;
+                    }
+                }
             }
             s.push_str(i.default_format().as_str());
         });

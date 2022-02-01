@@ -45,7 +45,7 @@ pub enum Subcommands {
         #[clap(short, long)]
         id: bool,
     },
-    /// Search of an item
+    /// Search for an item
     Search {
         /// search for an artist
         #[clap(short, long)]
@@ -57,13 +57,20 @@ pub enum Subcommands {
         #[clap(short, long)]
         track : bool,
 
-        /// limit the result
-        #[clap(long)]
-        limit : Option<u8>,
-
         /// market to look for
         #[clap(long)]
         market : Option<String>,
+
+        /// limit the result
+        /// MAX Value : 50
+        #[clap(long)]
+        limit : Option<u8>,
+
+        /// offset the result
+        #[clap(long)]
+        offset : Option<u32>,
+
+
 
         /// search item
         item : String
@@ -195,13 +202,13 @@ pub fn run_list_show(
 }
 // ------------------------ Search ------------------------ \\
 
-pub async fn run_search(artist : bool, album : bool, track : bool, limit : Option<u8>, market : Option<String>, item : String) -> Option<()> {
+pub async fn run_search(artist : bool, album : bool, track : bool,  market : Option<String>, limit : Option<u8>, offset : Option<u32>, item : String) -> Option<()> {
     let mut ressource_types = vec![];
     if artist { ressource_types.push(SpotifySearchType::Artist)}
     if track { ressource_types.push(SpotifySearchType::Track)}
     if album { ressource_types.push(SpotifySearchType::Album)}
     let spotify = Spotify::init().await;
-    let result = spotify.search(item.as_str(), ressource_types, market, limit.map(|l| l as u32), None, None).await?;
+    let result = spotify.search(item.as_str(), ressource_types, market, limit.map(|l| if l > 50 { 50 } else {l} ), offset, None).await?;
     result.iter().for_each(|(_,v)| {
         if v.items.is_empty() {
             println!("\n****   No Result   ****\n")
