@@ -1,12 +1,12 @@
 use clap::ArgGroup;
 use rusqlite::params;
-use std::process::exit;
+use std::{process::exit, fs::OpenOptions, io::Write};
 
 use clap::{Parser, Subcommand};
 
 use crate::{
     spotify::{Spotify, SpotifySearchType},
-    sql::ArtistDB,
+    sql::ArtistDB, app_dir_pathbuf,
 };
 
 
@@ -74,6 +74,15 @@ pub enum Subcommands {
 
         /// search item
         item : String
+    },
+    /// Init koto with the spotify client credentials
+    Init {
+        /// Set the client id
+        #[clap(long)]
+        client_id : String,
+        /// Set the client secret
+        #[clap(long)]
+        client_secret : String
     }
 }
 
@@ -198,6 +207,15 @@ pub fn run_list_show(
             .for_each(|_| println!("------------------"));
     }
 
+    Some(())
+}
+// ------------------------- Init ------------------------- \\
+pub fn run_init(client_id : String, client_secret : String) -> Option<()>{
+    let mut app_dir = app_dir_pathbuf();
+    app_dir.push(".env");
+    let mut env = OpenOptions::new().create(true).truncate(true).write(true).open(app_dir).ok()?;
+    env.write(format!("CLIENT_ID={}", client_id).as_bytes()).ok()?;
+    env.write(format!("CLIENT_SECRET={}", client_secret).as_bytes()).ok()?;
     Some(())
 }
 // ------------------------ Search ------------------------ \\

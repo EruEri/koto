@@ -1,4 +1,5 @@
 /target
 .env
 new_song_db_copie.sqlite
+new_song_db.sqlite
 .DS_Store

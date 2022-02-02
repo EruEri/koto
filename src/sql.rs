@@ -86,7 +86,7 @@ impl ArtistDB {
 
 impl ArtistDB {
     pub fn fetch_all() -> Option<(Vec<ArtistDB>, Connection)>{
-        let connection = Connection::open(database_path()).ok()?;
+        let connection = Self::open()?;
         let mut stmt = connection.prepare(FETCH_ALL_QUERY).ok()?;
         let artists = stmt.query_map([], |r| {
             
@@ -107,7 +107,17 @@ impl ArtistDB {
     }
 
     pub fn open() -> Option<Connection> {
-        Connection::open(database_path()).ok()
+        let connection = Connection::open(database_path()).ok()?;
+        let _ = connection.execute("CREATE TABLE if not exists artist_table (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            artist_name VARCHAR(50),
+            artist_spotify_id VARCHAR(30) NOT NULL UNIQUE ,
+            last_album TINYTEXT,
+            last_album_release_date DATE, 
+            last_album_spotify_id VARCHAR(30) NOT NULL UNIQUE
+            , last_album_url TINYTEXT", params![]).ok()?;
+
+        Some(connection)
     }
 
     pub async fn update(&mut self, spotify : &Spotify, connection : &Connection) -> Option<bool> {
