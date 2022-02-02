@@ -115,7 +115,7 @@ impl ArtistDB {
             last_album TINYTEXT,
             last_album_release_date DATE, 
             last_album_spotify_id VARCHAR(30) NOT NULL UNIQUE
-            , last_album_url TINYTEXT", params![]).ok()?;
+            , last_album_url TINYTEXT", []);
 
         Some(connection)
     }
