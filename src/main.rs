@@ -36,8 +36,8 @@ async fn main() {
             match sub {
                 command::Subcommands::List { delete, add, update, full, id } => {let _ = run_list(delete, add, update, full, id).await;},
                 command::Subcommands::Search { artist, album, track, market, limit, offset, item } => {let _ = run_search(artist, album, track, market, limit, offset, item).await; },
-                command::Subcommands::Init { client_id, client_secret } => {
-                    if let None = run_init(client_id, client_secret){
+                command::Subcommands::Init { client_id, client_secret, force } => {
+                    if let None = run_init(client_id, client_secret, force){
                         println!("Unable to set the client credentials")
                     }
                 },

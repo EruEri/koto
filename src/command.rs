@@ -82,7 +82,10 @@ pub enum Subcommands {
         client_id : String,
         /// Set the client secret
         #[clap(long)]
-        client_secret : String
+        client_secret : String,
+        /// Force the overwrite of credentials
+        #[clap(short, long)]
+        force : bool
     }
 }
 
@@ -210,7 +213,13 @@ pub fn run_list_show(
     Some(())
 }
 // ------------------------- Init ------------------------- \\
-pub fn run_init(client_id : String, client_secret : String) -> Option<()>{
+pub fn run_init(client_id : String, client_secret : String, force : bool) -> Option<()>{
+    if let (Some(_),Some(_)) = (std::env::var("CLIENT_ID").ok(), std::env::var("CLIENT_SECRET").ok()) {
+        if !force { 
+            println!("Credentials already set");
+            exit(1)
+        }
+    }
     let mut app_dir = app_dir_pathbuf();
     app_dir.push(".env");
     let mut env = OpenOptions::new().create(true).truncate(true).write(true).open(app_dir).ok()?;
