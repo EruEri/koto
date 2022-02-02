@@ -555,9 +555,6 @@ pub struct SpotifySearchAlbumArtist {
 impl SpotifySearchResultItem {
     pub fn default_format(&self) -> String {
         let mut s = String::new();
-        s.push('\n');
-        s.push('\n');
-        s.push('\n');
         match self {
             SpotifySearchResultItem::Track {
                 album,
@@ -601,7 +598,6 @@ impl SpotifySearchResultItem {
                     )
                 });
                 s.push_str(format!("****   Album       : {}\n", album.name.clone()).as_str());
-                s.push('\n');
             }
             SpotifySearchResultItem::Artist {
                 external_urls: _,
@@ -620,7 +616,6 @@ impl SpotifySearchResultItem {
                 s.push_str(format!("****   Artist ID     : {}\n", id).as_str());
                 let genres = genres.join("\n                     : ");
                 s.push_str(format!("****   Genre         : {}\n", genres).as_str());
-                s.push('\n');
             }
             SpotifySearchResultItem::Album {
                 album_type,
@@ -674,15 +669,16 @@ impl SpotifySearchResult {
         let mut section_track = true;
         let mut section_artist = true;
         let mut section_album = true;
+        let mut items_count = self.offset;
         self.items.iter().for_each(|i| {
             match i {
                 SpotifySearchResultItem::Track { .. } => {
                     if section_track {
-                        s.push_str("-------------------------------\n");
-                        s.push_str("-------------------------------\n");
-                        s.push_str("----------  Tracks  -----------\n");
-                        s.push_str("-------------------------------\n");
-                        s.push_str("-------------------------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("---------------  Tracks  ---------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("----------------------------------------\n");
                         s.push('\n');
                         s.push('\n');
                         s.push_str(
@@ -701,15 +697,16 @@ impl SpotifySearchResult {
                         section_track = false;
                         section_artist = true;
                         section_album = true;
+                        items_count = self.offset
                     }
                 }
                 SpotifySearchResultItem::Artist { .. } => {
                     if section_artist {
-                        s.push_str("-------------------------------\n");
-                        s.push_str("-------------------------------\n");
-                        s.push_str("----------- Artists -----------\n");
-                        s.push_str("-------------------------------\n");
-                        s.push_str("-------------------------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("---------------- Artists ---------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("----------------------------------------\n");
                         s.push('\n');
                         s.push('\n');
                         s.push_str(
@@ -725,19 +722,22 @@ impl SpotifySearchResult {
                                 .as_str(),
                         );
                         s.push('\n');
+                        s.push('\n');
+                        s.push('\n');
 
                         section_track = true;
                         section_artist = false;
                         section_album = true;
+                        items_count = self.offset
                     }
                 }
                 &SpotifySearchResultItem::Album { .. } => {
                     if section_album {
-                        s.push_str("-------------------------------\n");
-                        s.push_str("-------------------------------\n");
-                        s.push_str("------------ Albums -----------\n");
-                        s.push_str("-------------------------------\n");
-                        s.push_str("-------------------------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("----------------- Albums ---------------\n");
+                        s.push_str("----------------------------------------\n");
+                        s.push_str("----------------------------------------\n");
                         s.push('\n');
                         s.push('\n');
                         s.push_str(
@@ -757,10 +757,15 @@ impl SpotifySearchResult {
                         section_track = true;
                         section_artist = true;
                         section_album = false;
+                        items_count = self.offset
                     }
                 }
             }
+            items_count += 1;
+            s.push_str(format!("****   {}\n", items_count).as_str());
             s.push_str(i.default_format().as_str());
+            s.push('\n');
+            s.push('\n');
         });
         s.push('\n');
         s.push('\n');
