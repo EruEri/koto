@@ -1,10 +1,10 @@
-use std::{process::exit, os::raw::c_char, ffi::CStr, path::PathBuf};
+use std::{ffi::CStr, os::raw::c_char, path::PathBuf, process::exit};
 
 use clap::StructOpt;
-use command::{Main, run_list, run_search, run_init};
+use command::{run_init, run_list, run_search, Main, run_edit};
 
-mod spotify;
 mod command;
+mod spotify;
 mod sql;
 
 #[tokio::main]
@@ -31,19 +31,57 @@ async fn main() {
     let main = Main::parse();
 
     match main.subcommand {
-        None => {println!("No sub"); exit(0)},
-        Some(sub) => {
-            match sub {
-                command::Subcommands::List { delete, add, update, full, id } => {let _ = run_list(delete, add, update, full, id).await;},
-                command::Subcommands::Search { artist, album, track, market, limit, offset, item } => {let _ = run_search(artist, album, track, market, limit, offset, item).await; },
-                command::Subcommands::Init { client_id, client_secret, force } => {
-                    if let None = run_init(client_id, client_secret, force){
-                        println!("Unable to set the client credentials")
-                    }
-                },
+        None => {
+            println!("No sub");
+            exit(0)
+        }
+        Some(sub) => match sub {
+            command::Subcommands::List {
+                delete,
+                add,
+                update,
+                full,
+                id,
+            } => {
+                let _ = run_list(delete, add, update, full, id).await;
             }
+            command::Subcommands::Search {
+                artist,
+                album,
+                track,
+                market,
+                limit,
+                offset,
+                item,
+            } => {
+                let _ = run_search(artist, album, track, market, limit, offset, item).await;
+            }
+            command::Subcommands::Init {
+                client_id,
+                client_secret,
+                force,
+            } => {
+                if let None = run_init(client_id, client_secret, force) {
+                    println!("Unable to set the client credentials")
+                }
+            }
+            command::Subcommands::Edit {
+                file_type,
+                title,
+                artist,
+                album,
+                artist_album,
+                year,
+                bpm,
+                track_position,
+                images,
+                output,
+                file,
+            } => {
+                let _ = run_edit(file_type, title, artist, album, artist_album, year, bpm, track_position, images, output, file).await;
+
+            },
         },
-        
     }
 }
 
@@ -52,9 +90,7 @@ extern "C" {
 }
 
 fn home_dir<'a>() -> &'a CStr {
-    unsafe {
-        CStr::from_ptr(get_home_dir())
-    }
+    unsafe { CStr::from_ptr(get_home_dir()) }
 }
 pub fn app_dir() -> String {
     let mut pathbuf = PathBuf::from(home_dir().to_str().unwrap());

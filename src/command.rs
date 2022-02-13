@@ -1,14 +1,17 @@
-use clap::ArgGroup;
+use clap::{ArgEnum, ArgGroup};
 use rusqlite::params;
-use std::{process::exit, fs::OpenOptions, io::Write};
+use std::{
+    fs::OpenOptions, io::Write, path::PathBuf, process::exit, str::FromStr,
+};
+use tag_edit::{PictureFormat, ID3TAG, FlacTag};
 
 use clap::{Parser, Subcommand};
 
 use crate::{
+    app_dir_pathbuf,
     spotify::{Spotify, SpotifySearchType},
-    sql::ArtistDB, app_dir_pathbuf,
+    sql::ArtistDB,
 };
-
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -49,46 +52,89 @@ pub enum Subcommands {
     Search {
         /// search for an artist
         #[clap(short, long)]
-        artist : bool,
+        artist: bool,
         /// search for an album
-        #[clap(short = 'b', long)]
-        album : bool,
+        #[clap(short = 'l', long)]
+        album: bool,
         /// search for an track
         #[clap(short, long)]
-        track : bool,
+        track: bool,
 
         /// market to look for
         #[clap(long)]
-        market : Option<String>,
+        market: Option<String>,
 
         /// limit the result
         /// MAX Value : 50
         #[clap(long)]
-        limit : Option<u8>,
+        limit: Option<u8>,
 
         /// offset the result
         #[clap(long)]
-        offset : Option<u32>,
-
-
-
+        offset: Option<u32>,
         /// search item
-        item : String
+        item: String,
     },
     /// Init koto with the spotify client credentials
     Init {
         /// Set the client id
         #[clap(long)]
-        client_id : String,
+        client_id: String,
         /// Set the client secret
         #[clap(long)]
-        client_secret : String,
+        client_secret: String,
         /// Force the overwrite of credentials
         #[clap(short, long)]
-        force : bool
-    }
-}
+        force: bool,
+    },
 
+    // #[clap(group(
+    // ArgGroup::new("type")
+    // .required(true)
+    // .args(&["mp3", "flac"])
+    // ))
+    // ]
+    /// Edit mp3 and flac file
+    Edit {
+        #[clap(long = "type", arg_enum)]
+        file_type: FileType,
+        /// Set the music title
+        #[clap(short, long)]
+        title: Option<String>,
+        /// Set the track artist name
+        #[clap(long)]
+        artist: Option<String>,
+        /// Set the album name
+        #[clap(long)]
+        album: Option<String>,
+        /// Set the album artist
+        #[clap(long)]
+        artist_album: Option<String>,
+        /// Set year
+        #[clap(long)]
+        year: Option<i16>,
+        /// Set bpm
+        #[clap(long)]
+        bpm: Option<u16>,
+        /// Set track position
+        #[clap(long)]
+        /// Set track position
+        track_position: Option<u16>,
+        /// Add images
+        #[clap(long)]
+        images: Option<Vec<String>>,
+        /// Output the
+        #[clap(short)]
+        output: Option<String>,
+        /// Audio file
+        file: String,
+    },
+}
+#[derive(Clone, Copy, Debug, ArgEnum)]
+pub enum FileType {
+    Mp3,
+    Flac,
+}
 pub async fn run_list(
     delete: Option<String>,
     add: Option<String>,
@@ -111,28 +157,37 @@ pub async fn run_list_modify(id: bool, delete: bool, name: String) -> Option<()>
     if !delete {
         let spotify = Spotify::init().await;
         let artist = ArtistDB::from_name(&name, id, &spotify).await?;
-        match ArtistDB::insert_db(&artist){
+        match ArtistDB::insert_db(&artist) {
             Ok(u) => {
                 if u == 1 {
                     println!("Operation Succesed\n{} added to the database", name);
                 }
-                
-            },
+            }
             Err(e) => {
                 println!("An error occured \n{}", e);
-                return None ;
-            },
+                return None;
+            }
         }
     } else {
         let connection = ArtistDB::open().unwrap_or_else(|| panic!("Unable to open the database"));
-        let field = if id { "artist_spotify_id" } else { "artist_name" };
+        let field = if id {
+            "artist_spotify_id"
+        } else {
+            "artist_name"
+        };
         let sql_string = format!("DELETE FROM artist_table WHERE {} = ?1", field);
-        match connection.execute(sql_string.as_str(), params![name]){
-            Ok(size) => if size == 0 { println!("No artist deleted")} else { println!("{} artist deleted", size)},
+        match connection.execute(sql_string.as_str(), params![name]) {
+            Ok(size) => {
+                if size == 0 {
+                    println!("No artist deleted")
+                } else {
+                    println!("{} artist deleted", size)
+                }
+            }
             Err(_) => {
-                println!("An error Occurred"); 
+                println!("An error Occurred");
                 exit(1)
-            },
+            }
         }
         let _ = connection.close();
     }
@@ -182,10 +237,7 @@ pub async fn run_list_update(names: Option<Vec<String>>, id: bool) -> Option<()>
     Some(())
 }
 
-pub fn run_list_show(
-    all_info: bool,
-    names: Option<Vec<String>>, id: bool
-) -> Option<()> {
+pub fn run_list_show(all_info: bool, names: Option<Vec<String>>, id: bool) -> Option<()> {
     let mut artists = ArtistDB::fetch_all()?.0;
     if let Some(name) = names {
         artists.retain(|artist| {
@@ -213,37 +265,187 @@ pub fn run_list_show(
     Some(())
 }
 // ------------------------- Init ------------------------- \\
-pub fn run_init(client_id : String, client_secret : String, force : bool) -> Option<()>{
-    if let (Some(_),Some(_)) = (std::env::var("CLIENT_ID").ok(), std::env::var("CLIENT_SECRET").ok()) {
-        if !force { 
+pub fn run_init(client_id: String, client_secret: String, force: bool) -> Option<()> {
+    if let (Some(_), Some(_)) = (
+        std::env::var("CLIENT_ID").ok(),
+        std::env::var("CLIENT_SECRET").ok(),
+    ) {
+        if !force {
             println!("Credentials already set");
             exit(1)
         }
     }
     let mut app_dir = app_dir_pathbuf();
     app_dir.push(".env");
-    let mut env = OpenOptions::new().create(true).truncate(true).write(true).open(app_dir).ok()?;
-    env.write(format!("CLIENT_ID={}", client_id).as_bytes()).ok()?;
-    env.write(format!("CLIENT_SECRET={}", client_secret).as_bytes()).ok()?;
+    let mut env = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(app_dir)
+        .ok()?;
+    env.write(format!("CLIENT_ID={}\n", client_id).as_bytes())
+        .ok()?;
+    env.write(format!("CLIENT_SECRET={}\n", client_secret).as_bytes())
+        .ok()?;
     Some(())
 }
 // ------------------------ Search ------------------------ \\
 
-pub async fn run_search(artist : bool, album : bool, track : bool,  market : Option<String>, limit : Option<u8>, offset : Option<u32>, item : String) -> Option<()> {
+pub async fn run_search(
+    artist: bool,
+    album: bool,
+    track: bool,
+    market: Option<String>,
+    limit: Option<u8>,
+    offset: Option<u32>,
+    item: String,
+) -> Option<()> {
     let mut ressource_types = vec![];
-    if artist { ressource_types.push(SpotifySearchType::Artist)}
-    if track { ressource_types.push(SpotifySearchType::Track)}
-    if album { ressource_types.push(SpotifySearchType::Album)}
+    if artist {
+        ressource_types.push(SpotifySearchType::Artist)
+    }
+    if track {
+        ressource_types.push(SpotifySearchType::Track)
+    }
+    if album {
+        ressource_types.push(SpotifySearchType::Album)
+    }
     let spotify = Spotify::init().await;
-    let result = spotify.search(item.as_str(), ressource_types, market, limit.map(|l| if l > 50 { 50 } else {l} ), offset, None).await?;
-    result.iter().for_each(|(_,v)| {
+    let result = spotify
+        .search(
+            item.as_str(),
+            ressource_types,
+            market,
+            limit.map(|l| if l > 50 { 50 } else { l }),
+            offset,
+            None,
+        )
+        .await?;
+    result.iter().for_each(|(_, v)| {
         if v.items.is_empty() {
             println!("\n****   No Result   ****\n")
-        }else {
+        } else {
             println!("{}", v.default_format());
         }
     });
     //println!("{:?}", result);
 
     Some(())
+}
+
+// ------------------------  Edit  ------------------------ \\
+pub async fn run_edit(
+    file_type: FileType,
+    title: Option<String>,
+    artist: Option<String>,
+    album: Option<String>,
+    artist_album: Option<String>,
+    year: Option<i16>,
+    bpm: Option<u16>,
+    track_position: Option<u16>,
+    images: Option<Vec<String>>,
+    output: Option<String>,
+    file: String,
+) -> Option<()> {
+    match file_type {
+        FileType::Mp3 => {
+            let mut id3tag = ID3TAG::from_path(file.as_str())?;
+            if let Some(title) = title {
+                id3tag.set_title(title.as_str())
+            }
+            if let Some(artist) = artist {
+                id3tag.set_artist(artist.as_str())
+            }
+            if let Some(album) = album {
+                id3tag.set_album(album.as_str())
+            }
+            if let Some(artist_album) = artist_album {
+                id3tag.set_album_artist(artist_album.as_str())
+            }
+            if let Some(year) = year {
+                id3tag.set_year(year)
+            }
+            if let Some(bpm) = bpm {
+                id3tag.set_bpm(bpm)
+            }
+            if let Some(tp) = track_position {
+                id3tag.set_track_position(tp, None)
+            }
+            if let Some(images) = images {
+                for image in images {
+                    let pathbuf = PathBuf::from_str(&image.as_str()).ok()?;
+                    let extension = pathbuf
+                        .extension()
+                        .map(|os| os.to_str())
+                        .unwrap_or_else(|| Some(""))?;
+                    let _ = id3tag.add_picture_from_file(
+                        image.as_str(),
+                        PictureFormat::OTHER(extension.to_string()),
+                        None,
+                        None,
+                    ).ok().unwrap_or_else(|| {println!("Unable to add the picture"); exit(1)});
+                }
+            }
+            if let Some(output) = output {
+                let _ = id3tag.write_tag(output.as_str()).unwrap_or_else(|_| {
+                    println!("Unable to write the file"); exit(1)
+                });
+            }else {
+                let _ = id3tag.overwrite_tag().unwrap_or_else(|_| {
+                    println!("Unable to write the file"); exit(1)
+                });
+            }
+            Some(())
+        }
+        FileType::Flac => {
+            let mut flac = FlacTag::from_path(file.as_str())?;
+            if let Some(title) = title {
+                flac.set_title(title.as_str())
+            }
+            if let Some(artist) = artist {
+                flac.set_artist(artist.as_str())
+            }
+            if let Some(album) = album {
+                flac.set_album(album.as_str())
+            }
+            if let Some(artist_album) = artist_album {
+                flac.set_album_artist(artist_album.as_str())
+            }
+            if let Some(year) = year {
+                flac.set_date(year.to_string().as_str())
+            }
+            if let Some(bpm) = bpm {
+                flac.set_bpm(bpm)
+            }
+            if let Some(tp) = track_position {
+                flac.set_track_position(tp)
+            }
+
+            if let Some(pictures) = images {
+                for image in pictures {
+                    let pathbuf = PathBuf::from_str(&image.as_str()).ok()?;
+                    let extension = pathbuf
+                        .extension()
+                        .map(|os| os.to_str().unwrap().to_string())
+                        .unwrap_or_else(|| String::new());
+
+                    let _ = flac.add_picture_from_path(
+                        &image.as_str(), tag_edit::PictureType::Other, PictureFormat::OTHER(extension), None, 
+                        400, 400, 16, None)
+                        .ok().unwrap_or_else(|| {println!("Unable to add the picture"); exit(1)});
+                }
+            }
+
+            if let Some(output) = output {
+                let _ = flac.write_flac(output.as_str()).unwrap_or_else(|_| {
+                    println!("Unable to write the file"); exit(1)
+                });
+            }else {
+                let _ = flac.overwrite_flac().unwrap_or_else(|_| {
+                    println!("Unable to write the file"); exit(1)
+                });
+            }
+            Some(())
+        },
+    }
 }

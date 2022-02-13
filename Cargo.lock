@@ -462,6 +462,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "tag_edit",
  "tokio",
 ]
 
@@ -954,6 +955,11 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
+
+[[package]]
+name = "tag_edit"
+version = "0.2.1"
+source = "git+https://github.com/EruEri/tag_edit?tag=v0.2.1#5664972a1f894ee996ec6b878e61c533b5270c16"
 
 [[package]]
 name = "tempfile"
