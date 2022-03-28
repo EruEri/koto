@@ -3,6 +3,7 @@ use std::{ffi::CStr, os::raw::c_char, path::PathBuf, process::exit};
 use clap::StructOpt;
 use command::{run_init, run_list, run_search, Main, run_edit};
 
+mod python_binding;
 mod command;
 mod spotify;
 mod sql;
@@ -46,6 +47,7 @@ async fn main() {
                 let _ = run_list(delete, add, update, full, id).await;
             }
             command::Subcommands::Search {
+                search_subcommand,
                 artist,
                 album,
                 track,
@@ -54,7 +56,7 @@ async fn main() {
                 offset,
                 item,
             } => {
-                let _ = run_search(artist, album, track, market, limit, offset, item).await;
+                let _ = run_search(search_subcommand, artist, album, track, market, limit, offset, item.unwrap_or("".into())).await;
             }
             command::Subcommands::Init {
                 client_id,

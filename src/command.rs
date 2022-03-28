@@ -10,8 +10,9 @@ use clap::{Parser, Subcommand};
 use crate::{
     app_dir_pathbuf,
     spotify::{Spotify, SpotifySearchType},
-    sql::ArtistDB,
+    sql::ArtistDB, python_binding::show_image,
 };
+
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -49,7 +50,12 @@ pub enum Subcommands {
         id: bool,
     },
     /// Search for an item
+    
+    // #[clap(subcommand_precedence_over_arg = true)]
+    #[clap(subcommand_negates_reqs = true ,args_conflicts_with_subcommands = true)]
     Search {
+        #[clap(subcommand)]
+        search_subcommand : Option<SearchSubCommand>,
         /// search for an artist
         #[clap(short, long)]
         artist: bool,
@@ -73,7 +79,8 @@ pub enum Subcommands {
         #[clap(long)]
         offset: Option<u32>,
         /// search item
-        item: String,
+        #[clap(required = true)]
+        item: Option<String>,
     },
     /// Init koto with the spotify client credentials
     Init {
@@ -94,6 +101,7 @@ pub enum Subcommands {
     // .args(&["mp3", "flac"])
     // ))
     // ]
+
     /// Edit mp3 and flac file
     Edit {
         #[clap(long = "type", arg_enum)]
@@ -129,6 +137,51 @@ pub enum Subcommands {
         /// Audio file
         file: String,
     },
+}
+
+#[derive(Subcommand)]
+pub enum SearchSubCommand  {
+
+    // #[clap(groups(
+    //     vec![
+    //         ArgGroup::new("search_type")
+    //         .required(false)
+    //         .args(&["albums", "related_artists"])
+    //     ]
+    // )) ]
+
+
+    /// Search content related to an artist
+    #[clap(group(
+            ArgGroup::new("search_type")
+            .required(false)
+            .args(&["albums"])
+            .conflicts_with("related_artists")
+    )) ]
+    
+    Artist {
+        #[clap(short, long)]
+        /// Search artist's albums
+        albums : bool,
+        #[clap(long)]
+        /// Search related artists
+        related_artists : bool,
+        #[clap(long)]
+        /// Search by artist id
+        id : bool,
+        /// Search item
+        artist : String,
+
+    },
+    /// Search content related to an album
+    Album {
+
+    },
+    /// Search content related to a track
+    Track {
+
+    },
+
 }
 #[derive(Clone, Copy, Debug, ArgEnum)]
 pub enum FileType {
@@ -292,6 +345,7 @@ pub fn run_init(client_id: String, client_secret: String, force: bool) -> Option
 // ------------------------ Search ------------------------ \\
 
 pub async fn run_search(
+    search_subcommand: Option<SearchSubCommand>,
     artist: bool,
     album: bool,
     track: bool,
@@ -300,6 +354,9 @@ pub async fn run_search(
     offset: Option<u32>,
     item: String,
 ) -> Option<()> {
+    if let Some(command) = search_subcommand {
+        return run_search_subcommand(command).await;
+    }
     let mut ressource_types = vec![];
     if artist {
         ressource_types.push(SpotifySearchType::Artist)
@@ -331,6 +388,53 @@ pub async fn run_search(
     //println!("{:?}", result);
 
     Some(())
+}
+
+pub(crate) async fn run_search_subcommand(search : SearchSubCommand) -> Option<()>{
+    match search {
+        SearchSubCommand::Artist { albums, related_artists, id, artist } => {
+            run_artist_search(albums, related_artists, id, artist).await
+        },
+        SearchSubCommand::Album {  } => todo!(),
+        SearchSubCommand::Track {  } => todo!(),
+    }
+}
+
+pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, query : String) -> Option<()>{
+    let spotify = Spotify::init().await;
+    let artist_id = if id { query } else {
+        let result = spotify.search(query.as_str(), vec![SpotifySearchType::Artist], 
+        None, Some(1), Some(0), None).await.unwrap_or_else(|| {println!("Wrong Api Response"); exit(1)});
+        let items = result.get(&crate::spotify::SpotifySearchKey::Artists).unwrap_or_else(|| {println!("Unable to get the artist"); exit(1)});
+        let mut vec_artist_id = items.items.iter().filter_map(|ssri|{
+            match ssri {
+                
+                crate::spotify::SpotifySearchResultItem::Artist { external_urls, followers, genres, href, id, images, name, popularity, artist_type, uri } => {
+                    Some(id.clone())
+                },
+                _ => None
+            }
+        }).collect::<Vec<String>>();
+        if !vec_artist_id.is_empty() {
+            vec_artist_id.remove(0)
+        }else { println!("No artist returned"); exit(1)}
+    };
+    match (albums, related_artists) {
+        (true, true) => unreachable!("Albums and Related are mutualy exclued"),
+        (true, false) => todo!(),
+        (false, true) => todo!(),
+        (false, false) => {
+            let artist = spotify.artist(artist_id.as_str()).await.unwrap_or_else(|| {println!("Unable to retrieve the artist"); exit(1)});
+            if let Some(map)  = artist.images.get(0){
+                if let Some(url) = map.get("url"){
+                    let url = url.as_str().unwrap();
+                    show_image(url, Some(artist.name.as_str()));
+                }
+            }
+        },
+    }
+    Some(())
+
 }
 
 // ------------------------  Edit  ------------------------ \\
