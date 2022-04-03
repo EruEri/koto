@@ -10,7 +10,7 @@ use clap::{Parser, Subcommand};
 use crate::{
     app_dir_pathbuf,
     spotify::{Spotify, SpotifySearchType},
-    sql::ArtistDB, python_binding::show_image,
+    sql::ArtistDB, util,
 };
 
 
@@ -425,10 +425,15 @@ pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, 
         (false, true) => todo!(),
         (false, false) => {
             let artist = spotify.artist(artist_id.as_str()).await.unwrap_or_else(|| {println!("Unable to retrieve the artist"); exit(1)});
+            println!("Name  : {}", artist.name);
+            println!("Genre : {}", artist.genres.join("\n        "));
             if let Some(map)  = artist.images.get(0){
                 if let Some(url) = map.get("url"){
                     let url = url.as_str().unwrap();
-                    show_image(url, Some(artist.name.as_str()));
+                    let dyn_image = util::donwload_image(url).await;
+                    if let Some(image) = dyn_image {
+                        util::show_image(&image);
+                    }
                 }
             }
         },

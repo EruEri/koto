@@ -17,4 +17,5 @@ clap = {version = "3.1.6", features=["derive"]}
 rusqlite = "0.26.3"
 serde_with = "1.11.0"
 tag_edit = {git = "https://github.com/EruEri/tag_edit", tag = "v0.2.1"}
-pyo3 = "0.16.2"
+viuer = "0.6"
+image = "0.24.1"

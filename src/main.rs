@@ -3,9 +3,10 @@ use std::{ffi::CStr, os::raw::c_char, path::PathBuf, process::exit};
 use clap::StructOpt;
 use command::{run_init, run_list, run_search, Main, run_edit};
 
-mod python_binding;
+
 mod command;
 mod spotify;
+mod util;
 mod sql;
 
 #[tokio::main]
