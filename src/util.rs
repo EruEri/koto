@@ -1,6 +1,6 @@
 
 
-use std::{future, cmp};
+use std::{future, cmp, process::exit};
 
 use image::DynamicImage;
 use viuer::Config;
@@ -28,12 +28,21 @@ pub (crate) fn show_image_config(image : &DynamicImage, config : &Config) -> Opt
     viuer::print(image, config).ok().map(|_| ())
 }
 
-pub (crate) async fn display_related_artist(artists : &Vec<Artist>, chunck_size : usize) -> Option<()>{
+pub (crate) async fn display_related_artist(artists : &Vec<Artist>, column : usize, limit : usize, graphic : bool) -> Option<()>{
 
-    
+    let artists = if artists.len() > limit { 
+        artists.into_iter()
+        .enumerate()
+        .filter_map(|(index, a)| if index < limit { Some( a ) } else { None } )
+        .collect::<Vec<&Artist>>()
+    } else { 
+            artists.iter()
+            .map(|a| a)
+            .collect()
+    };
 
-    for chunk in artists.chunks(chunck_size) {
-        'inner: for i in 0..chunck_size {
+    for chunk in artists.chunks(column) {
+        'inner: for i in 0..column {
             if let Some(artist) = chunk.get(i){
                 let name = &artist.name;
                 let name_format = format!("Name   : {}", name);
@@ -46,7 +55,7 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, chunck_size 
         }
         println!("");
 
-        for i in 0..chunck_size {
+        for i in 0..column {
             if let Some(artist) = chunk.get(i){
                 let id = &artist.id;
                 let id_format = format!("Id     : {}", id);
@@ -59,7 +68,7 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, chunck_size 
         }
         println!("");
 
-        for i in 0..chunck_size {
+        for i in 0..column {
             let max_genre = chunk.iter()
             .map(|artist| artist.genres.len())
             .reduce(|x, y| cmp::max(x, y));
@@ -74,17 +83,17 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, chunck_size 
             }
         }
         println!("");
-
-        for i in 0..chunck_size {
-            if let Some(artist) = chunk.get(i){
-                artist.dynamic_image().await.map(|image| {
-                    show_image_config(&image, &Config { absolute_offset: false, x: (i * 60) as u16, y: 0,restore_cursor : false ,width: Some(50), height: Some(50),..Default::default() });
-                });
-            }else {
-                break ;
+        if graphic {
+            for i in 0..column {
+                if let Some(artist) = chunk.get(i){
+                    artist.dynamic_image().await.map(|image| {
+                        show_image_config(&image, &Config { absolute_offset: false, x: (i * 60) as u16, y: 0,restore_cursor : false ,width: Some(50), height: Some(50),..Default::default() });
+                    });
+                }else {
+                    break ;
+                }
             }
         }
-        
     }
     Some(())
 }

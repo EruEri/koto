@@ -169,6 +169,15 @@ pub enum SearchSubCommand  {
         #[clap(long)]
         /// Search by artist id
         id : bool,
+         #[clap(short, long)]
+        /// Display graohic result (cover, picture, etc ...)
+        graphic : bool,
+        #[clap(short, long, default_value_t = 3)]
+        /// Result limit
+        limit : usize,
+        /// Output column
+        #[clap(short, long, default_value_t = 1)]
+        column : usize,
         /// Search item
         artist : String,
 
@@ -392,15 +401,15 @@ pub async fn run_search(
 
 pub(crate) async fn run_search_subcommand(search : SearchSubCommand) -> Option<()>{
     match search {
-        SearchSubCommand::Artist { albums, related_artists, id, artist } => {
-            run_artist_search(albums, related_artists, id, artist).await
+        SearchSubCommand::Artist { albums, related_artists, id,graphic, limit, column ,artist } => {
+            run_artist_search(albums, related_artists, id, graphic, limit, column, artist).await
         },
         SearchSubCommand::Album {  } => todo!(),
         SearchSubCommand::Track {  } => todo!(),
     }
 }
 
-pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, query : String) -> Option<()>{
+pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, graphic : bool, limit : usize, column : usize, query : String) -> Option<()>{
     let spotify = Spotify::init().await;
     let artist_id = if id { query } else {
         let result = spotify.search(query.as_str(), vec![SpotifySearchType::Artist], 
@@ -409,7 +418,7 @@ pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, 
         let mut vec_artist_id = items.items.iter().filter_map(|ssri|{
             match ssri {
                 
-                crate::spotify::SpotifySearchResultItem::Artist { external_urls, followers, genres, href, id, images, name, popularity, artist_type, uri } => {
+                crate::spotify::SpotifySearchResultItem::Artist { external_urls: _, followers:_, genres:_, href:_, id, images:_, name:_, popularity:_, artist_type:_, uri:_ } => {
                     Some(id.clone())
                 },
                 _ => None
@@ -424,7 +433,7 @@ pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, 
         (true, false) => todo!(),
         (false, true) => {
             let related_artists = spotify.related_artists(&artist_id).await.unwrap_or_else(|| {println!("Unable to fetch the related artist"); exit(1)});
-            return util::display_related_artist(&related_artists, 1).await;
+            return util::display_related_artist(&related_artists, column, limit, graphic).await;
         },
         (false, false) => {
             let artist = spotify.artist(artist_id.as_str()).await.unwrap_or_else(|| {println!("Unable to retrieve the artist"); exit(1)});
