@@ -422,7 +422,10 @@ pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, 
     match (albums, related_artists) {
         (true, true) => unreachable!("Albums and Related are mutualy exclued"),
         (true, false) => todo!(),
-        (false, true) => todo!(),
+        (false, true) => {
+            let related_artists = spotify.related_artists(&artist_id).await.unwrap_or_else(|| {println!("Unable to fetch the related artist"); exit(1)});
+            return util::display_related_artist(&related_artists, 1).await;
+        },
         (false, false) => {
             let artist = spotify.artist(artist_id.as_str()).await.unwrap_or_else(|| {println!("Unable to retrieve the artist"); exit(1)});
             println!("Name  : {}", artist.name);

@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 
@@ -7,7 +8,7 @@ use base64::encode;
 use reqwest::{RequestBuilder, StatusCode};
 use serde_json::Value;
 
-use crate::sql::Date;
+use crate::{sql::Date, util};
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -289,17 +290,18 @@ impl Spotify {
             None
         }
     }
-    pub async fn related_artists(&self, artist_ids: Vec<String>) -> Option<Value> {
+    pub async fn related_artists(&self, artist_id: &String) -> Option<Vec<Artist>> {
         let rb = self.setup_url_request(
             &SpotifyRessourceType::RelatedArtist,
-            artist_ids,
+            vec![artist_id.clone()],
             None,
             None,
             None,
             vec![],
         );
         if let Ok(response) = rb.send().await {
-            Some(response.json::<Value>().await.ok()?)
+            let map = response.json::<HashMap<SpotifySearchKey, Vec<Artist>>>().await.ok()?;
+            map.into_iter().map(|(k,v)| v).find(|_| true)
         } else {
             None
         }
@@ -324,6 +326,25 @@ impl Spotify {
         });
         let items = album.items.remove(0);
         Some(items)
+    }
+
+    pub async fn get_artist_id(&self, artist_name: String) -> Option<String> {
+        let result = self.search(artist_name.as_str(), vec![SpotifySearchType::Artist], 
+        None, Some(1), Some(0), None).await?;
+        let items = result.get(&crate::spotify::SpotifySearchKey::Artists)?;
+        let mut vec_artist_id = items.items.iter().filter_map( |ssri|
+            match ssri {
+                crate::spotify::SpotifySearchResultItem::Artist { external_urls, followers, genres, href, id, images, name, popularity, artist_type, uri } => {
+                    Some(id.clone())
+                },
+                _ => None
+            }
+        ).collect::<Vec<String>>();
+        if !vec_artist_id.is_empty() {
+            Some(vec_artist_id.remove(0))
+        }else {
+            None
+        }
     }
 }
 
@@ -390,6 +411,13 @@ pub struct Artist {
     #[serde(rename = "type")]
     pub(crate) artist_type: String,
     pub(crate) uri: String,
+}
+
+impl Artist {
+    pub (crate) async fn dynamic_image(&self) -> Option<DynamicImage>{
+        let url = self.images.get(0)?.get("url")?.as_str()?;
+        util::donwload_image(url).await
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
