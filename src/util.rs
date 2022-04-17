@@ -1,11 +1,11 @@
 
 
-use std::{future, cmp, process::exit};
+use std::cmp;
 
 use image::DynamicImage;
 use viuer::Config;
 
-use crate::spotify::Artist;
+use crate::spotify::{Artist};
 
 pub(crate) async fn donwload_image(url : &str) -> Option<DynamicImage> {
     let image_bytes = reqwest::get(url).await.ok()?.bytes().await.ok()?;
@@ -17,11 +17,11 @@ pub(crate) fn show_image(image : &DynamicImage) -> Option<()>{
         absolute_offset: false,
         x : 0,
         y : 0,
-        width : Some(50),
-        height : Some(50),
+        width : Some(50) /*Some(50)*/,
+        height : None /*Some(50)*/,
         ..Default::default()
     };
-    viuer::print(image, &config).ok().map(|_| ())
+    viuer::print(&image, &config).ok().map(|_| ())
 }
 
 pub (crate) fn show_image_config(image : &DynamicImage, config : &Config) -> Option<()>{
@@ -87,7 +87,7 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, column : usi
             for i in 0..column {
                 if let Some(artist) = chunk.get(i){
                     artist.dynamic_image().await.map(|image| {
-                        show_image_config(&image, &Config { absolute_offset: false, x: (i * 60) as u16, y: 0,restore_cursor : false ,width: Some(50), height: Some(50),..Default::default() });
+                        show_image_config(&image, &Config { absolute_offset: false, x: (i * 60) as u16, y: 0,restore_cursor : false ,width: Some(50), height: None,..Default::default() });
                     });
                 }else {
                     break ;

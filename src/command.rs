@@ -1,7 +1,7 @@
 use clap::{ArgEnum, ArgGroup};
 use rusqlite::params;
 use std::{
-    fs::OpenOptions, io::Write, path::PathBuf, process::exit, str::FromStr,
+    fs::OpenOptions, io::Write, path::PathBuf, process::exit, str::FromStr, time::Duration,
 };
 use tag_edit::{PictureFormat, ID3TAG, FlacTag};
 
@@ -74,6 +74,10 @@ pub enum Subcommands {
         /// MAX Value : 50
         #[clap(long)]
         limit: Option<u8>,
+
+        /// Display graohic result (cover, picture, etc ...) 
+        #[clap(short, long)]
+        graphic : bool,
 
         /// offset the result
         #[clap(long)]
@@ -222,7 +226,7 @@ pub async fn run_list_modify(id: bool, delete: bool, name: String) -> Option<()>
         match ArtistDB::insert_db(&artist) {
             Ok(u) => {
                 if u == 1 {
-                    println!("Operation Succesed\n{} added to the database", name);
+                    println!("Operation Succesed\n{} added to the database", artist.artist_name);
                 }
             }
             Err(e) => {
@@ -282,6 +286,7 @@ pub async fn run_list_update(names: Option<Vec<String>>, id: bool) -> Option<()>
     println!("------------------------------");
     println!("");
     for artist in artists.iter_mut() {
+        tokio::time::sleep(Duration::from_millis(300)).await;
         let updated = artist.update(&spotify, &connection).await;
         if let Some(updated) = updated {
             if updated {
@@ -360,6 +365,7 @@ pub async fn run_search(
     track: bool,
     market: Option<String>,
     limit: Option<u8>,
+    graphic : bool,
     offset: Option<u32>,
     item: String,
 ) -> Option<()> {
@@ -387,13 +393,13 @@ pub async fn run_search(
             None,
         )
         .await?;
-    result.iter().for_each(|(_, v)| {
-        if v.items.is_empty() {
+    for (_, ssr) in result.iter() {
+        if ssr.items.is_empty() {
             println!("\n****   No Result   ****\n")
-        } else {
-            println!("{}", v.default_format());
+        }else {
+            ssr.show_spotify_search_result(graphic).await;
         }
-    });
+    }
     //println!("{:?}", result);
 
     Some(())
@@ -426,7 +432,7 @@ pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, 
         }).collect::<Vec<String>>();
         if !vec_artist_id.is_empty() {
             vec_artist_id.remove(0)
-        }else { println!("No artist returned"); exit(1)}
+        }else { println!("No artist returned"); exit(1) }
     };
     match (albums, related_artists) {
         (true, true) => unreachable!("Albums and Related are mutualy exclued"),
@@ -504,7 +510,7 @@ pub async fn run_edit(
                         PictureFormat::OTHER(extension.to_string()),
                         None,
                         None,
-                    ).ok().unwrap_or_else(|| {println!("Unable to add the picture"); exit(1)});
+                    ).ok().unwrap_or_else(|| { println!("Unable to add the picture"); exit(1) });
                 }
             }
             if let Some(output) = output {

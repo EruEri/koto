@@ -54,10 +54,11 @@ async fn main() {
                 track,
                 market,
                 limit,
+                graphic,
                 offset,
                 item,
             } => {
-                let _ = run_search(search_subcommand, artist, album, track, market, limit, offset, item.unwrap_or("".into())).await;
+                let _ = run_search(search_subcommand, artist, album, track, market, limit, graphic, offset, item.unwrap_or("".into())).await;
             }
             command::Subcommands::Init {
                 client_id,

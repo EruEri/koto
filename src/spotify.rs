@@ -2,7 +2,8 @@
 
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display};
+use viuer::resize;
+use std::{collections::HashMap, fmt::Display, process::exit};
 
 use base64::encode;
 use reqwest::{RequestBuilder, StatusCode};
@@ -96,7 +97,7 @@ impl Spotify {
         included_genre: Vec<SpotifyIncludeGroupe>,
     ) -> RequestBuilder {
         let ids = if spotify_ids.len() > 1 {
-            let s = String::from("?ids=") + &spotify_ids.join("%2C").to_string();
+            let s = String::from("?ids=") + &spotify_ids.join(",").to_string();
             s
         } else {
             spotify_ids.first().unwrap().clone()
@@ -301,7 +302,9 @@ impl Spotify {
         );
         if let Ok(response) = rb.send().await {
             let map = response.json::<HashMap<SpotifySearchKey, Vec<Artist>>>().await.ok()?;
-            map.into_iter().map(|(k,v)| v).find(|_| true)
+            map.into_iter()
+            .map(|(k,v)| v)
+            .find(|_| true)
         } else {
             None
         }
@@ -417,6 +420,10 @@ impl Artist {
     pub (crate) async fn dynamic_image(&self) -> Option<DynamicImage>{
         let url = self.images.get(0)?.get("url")?.as_str()?;
         util::donwload_image(url).await
+    }
+
+    pub(crate) async fn dynamic_image_resize(&self, nwidth : Option<u32>, nheight : Option<u32>) -> Option<DynamicImage>{
+        self.dynamic_image().await.map(|image|  resize(&image, nwidth, nheight))
     }
 }
 
@@ -688,6 +695,122 @@ impl SpotifySearchResultItem {
         }
         s
     }
+
+    pub async fn show_result(&self, graphic : bool) -> Option<()> {
+        // print!("\n\n");
+        match self {
+            SpotifySearchResultItem::Track {
+                album,
+                artists,
+                available_markets: _,
+                disc_number: _,
+                duration_ms: _,
+                explicit: _,
+                external_ids: _,
+                external_urls: _,
+                href: _,
+                id,
+                is_local: _,
+                name,
+                popularity: _,
+                preview_url: _,
+                track_number: _,
+                t_type: _,
+                uri: _,
+            } => {
+                print!("****   Song Name   : {}\n", name);
+                print!("****   Song ID     : {}\n", id);
+                let mut couples = artists
+                    .iter()
+                    .map(|artist| (artist.name.clone(), artist.id.clone()))
+                    .collect::<Vec<_>>();
+                let couple_total = couples.len();
+                let (name, id) = couples.remove(0);
+                print!(
+                        "****   Artist{}      : {}  := ID : {}\n",
+                        if couple_total > 1 { "s" } else { "" },
+                        name,
+                        id
+                    );
+                couples.iter().for_each(|(s_name, s_id)| {
+                    print!("                     : {}  := ID : {}\n", s_name, s_id)
+                });
+                print!("****   Album       : {}\n", album.name.clone());
+                if graphic {
+                    let url_album = album.images.get(0)?.get("url")?.as_str()?;
+                    util::show_image(&util::donwload_image(url_album).await?);
+                    Some(println!("\n\n"))
+                }else {
+                    Some(())
+                }
+                
+            }
+            SpotifySearchResultItem::Artist {
+                external_urls: _,
+                followers: _,
+                genres,
+                href: _,
+                id,
+                images,
+                name,
+                popularity: _,
+                artist_type: _,
+                uri: _,
+            } => {
+
+                print!("****   Artist Name   : {}\n", name);
+                print!("****   Artist ID     : {}\n", id);
+                let genres = genres.join("\n                     : ");
+                print!("****   Genre         : {}\n", genres);
+                if graphic {
+                    let url = images.get(0)?.get("url")?.as_str()?;
+                    util::show_image(&util::donwload_image(url).await?);
+                    Some(println!("\n\n"))
+                }else {
+                    Some(())
+                }
+                
+            }
+            SpotifySearchResultItem::Album {
+                album_type,
+                artists,
+                external_urls: _,
+                available_markets: _,
+                href: _,
+                id,
+                images,
+                name,
+                release_date,
+                release_date_precision: _,
+                total_tracks,
+                a_type: _,
+                uri: _,
+            } => {
+                print!("****   Album Name    : {}\n", name);
+                print!("****   Album ID      : {}\n", id  );
+                let mut couples = artists
+                    .iter()
+                    .map(|artist| (artist.name.clone(), artist.id.clone()))
+                    .collect::<Vec<_>>();
+                let couple_total = couples.len();
+                let (name, id) = couples.remove(0);
+                print!("****   Artist{}       {}: {}  := ID : {}\n",
+                if couple_total > 1 { "s" } else { "" },
+                if couple_total > 1 { "" } else { " "}
+                , name, id);
+                print!("****   Release Date  : {}\n", release_date);
+                print!("****   Total Tracks  : {}\n", total_tracks);
+                print!("****   Album Type    : {}\n", album_type);
+                if graphic {
+                    let url = images.get(0)?.get("url")?.as_str()?;
+                    util::show_image(&util::donwload_image(url).await?);
+                    Some(println!("\n\n"))
+                }else {
+                    Some(())
+                }
+            },
+        }
+    }
 }
 
 impl SpotifySearchResult {
@@ -801,5 +924,78 @@ impl SpotifySearchResult {
         s.push('\n');
         s.push('\n');
         s
+    }
+
+    pub (crate) async  fn show_spotify_search_result(&self, graphic : bool) {
+        let mut section_track = true;
+        let mut section_artist = true;
+        let mut section_album = true;
+        let mut items_count = self.offset;
+        for item in self.items.iter() {
+            match item {
+                crate::spotify::SpotifySearchResultItem::Track { .. } => {
+                    if section_track {
+                        print!("----------------------------------------\n");
+                        print!("----------------------------------------\n");
+                        print!("---------------  Tracks  ---------------\n");
+                        print!("----------------------------------------\n");
+                        print!("----------------------------------------\n");
+                        print!("\n\n");
+                        print!("------ Number of items :  {}   -------\n", self.total);
+                        print!("------ result limit    :  {}   -------\n", self.limit);
+                        print!("------ result offset   :  {}   -------\n", self.offset);
+                        print!("\n");
+                        section_track = false;
+                        section_artist = true;
+                        section_album = true;
+                        items_count = self.offset
+                    }
+                },
+                crate::spotify::SpotifySearchResultItem::Artist { .. } => {
+                    if section_artist {
+                        print!("----------------------------------------\n");
+                        print!("----------------------------------------\n");
+                        print!("---------------- Artists ---------------\n");
+                        print!("----------------------------------------\n");
+                        print!("----------------------------------------\n");
+                        print!("\n");
+                        print!("\n");
+                        print!("------ Number of items :  {}   -------\n", self.total);
+                        print!("------ result limit    :  {}   -------\n", self.limit);
+                        print!("------ result offset   :  {}   -------\n", self.offset );
+                        print!("\n");
+                        section_track = true;
+                        section_artist = false;
+                        section_album = true;
+                        items_count = self.offset
+                    }
+                }
+                crate::spotify::SpotifySearchResultItem::Album { .. } => {
+                    if section_album {
+                        print!("----------------------------------------\n");
+                        print!("----------------------------------------\n");
+                        print!("----------------- Albums ---------------\n");
+                        print!("----------------------------------------\n");
+                        print!("----------------------------------------\n");
+                        print!("\n");
+                        print!("\n");
+                        print!("------ Number of items :  {}   -------\n", self.total);
+                        print!("------ result limit    :  {}   -------\n", self.limit);
+                        print!("------ result offset   :  {}   -------\n", self.offset );
+                        print!("\n");
+                        section_track = true;
+                        section_artist = true;
+                        section_album = false;
+                        items_count = self.offset
+                    }
+                }
+                ,
+            }
+            items_count += 1;
+            print!("****   {}\n", items_count);
+            item.show_result(graphic).await;
+            print!("\n\n");
+        }
+        print!("\n\n\n");
     }
 }

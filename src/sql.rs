@@ -167,7 +167,7 @@ impl ArtistDB {
         s.push_str(format!("***   Artist Name   : {}   \n", self.artist_name).as_str());
         s.push_str(format!("***   Artist ID     : {}   \n", self.artist_spotify_id).as_str());
         s.push_str(format!("***   Last Album    : {}   \n", self.last_album).as_str());
-        s.push_str(format!("***   Last album ID : {}   \n", self.artist_name).as_str());
+        s.push_str(format!("***   Last album ID : {}   \n", self.last_album_spotify_id).as_str());
         s.push_str(format!("***   Realease Date : {}   \n", self.last_album_release_date).as_str());
         s.push_str(format!("***   Album Url     : {}   \n", self.last_album_url).as_str());
         s
