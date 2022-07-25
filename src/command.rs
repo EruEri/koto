@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 
 use crate::{
     app_dir_pathbuf,
-    spotify::{Spotify, SpotifySearchType},
+    spotify::{Spotify, SpotifySearchType, SpotifyIncludeGroupe},
     sql::ArtistDB, util,
 };
 
@@ -178,7 +178,7 @@ pub enum SearchSubCommand  {
         graphic : bool,
         #[clap(short, long, default_value_t = 3)]
         /// Result limit
-        limit : usize,
+        limit : u32,
         /// Output column
         #[clap(short, long, default_value_t = 1)]
         column : usize,
@@ -415,7 +415,7 @@ pub(crate) async fn run_search_subcommand(search : SearchSubCommand) -> Option<(
     }
 }
 
-pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, graphic : bool, limit : usize, column : usize, query : String) -> Option<()>{
+pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, graphic : bool, limit : u32, column : usize, query : String) -> Option<()>{
     let spotify = Spotify::init().await;
     let artist_id = if id { query } else {
         let result = spotify.search(query.as_str(), vec![SpotifySearchType::Artist], 
@@ -436,10 +436,12 @@ pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, 
     };
     match (albums, related_artists) {
         (true, true) => unreachable!("Albums and Related are mutualy exclued"),
-        (true, false) => todo!(),
+        (true, false) => {
+            let albums = spotify.artist_album(artist_id, vec![SpotifyIncludeGroupe::Album, ], Some(limit), None, None).await.unwrap_or_else( || { println!("Unable to fetch the related artist"); exit(1)} );
+        },
         (false, true) => {
-            let related_artists = spotify.related_artists(&artist_id).await.unwrap_or_else(|| {println!("Unable to fetch the related artist"); exit(1)});
-            return util::display_related_artist(&related_artists, column, limit, graphic).await;
+            let related_artists = spotify.related_artists(&artist_id).await.unwrap_or_else(|| { println!("Unable to fetch the related artist"); exit(1) });
+            return util::display_related_artist(&related_artists, column, limit as usize, graphic).await;
         },
         (false, false) => {
             let artist = spotify.artist(artist_id.as_str()).await.unwrap_or_else(|| {println!("Unable to retrieve the artist"); exit(1)});

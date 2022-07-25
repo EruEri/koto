@@ -5,7 +5,7 @@ use std::cmp;
 use image::DynamicImage;
 use viuer::Config;
 
-use crate::spotify::{Artist};
+use crate::spotify::Artist;
 
 pub(crate) async fn donwload_image(url : &str) -> Option<DynamicImage> {
     let image_bytes = reqwest::get(url).await.ok()?.bytes().await.ok()?;
@@ -69,7 +69,7 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, column : usi
         println!("");
 
         for i in 0..column {
-            let max_genre = chunk.iter()
+            let _max_genre = chunk.iter()
             .map(|artist| artist.genres.len())
             .reduce(|x, y| cmp::max(x, y));
             if let Some(artist) = chunk.get(i){
