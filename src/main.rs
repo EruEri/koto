@@ -8,6 +8,7 @@ mod command;
 mod spotify;
 mod util;
 mod sql;
+mod bindings;
 
 #[tokio::main]
 async fn main() {

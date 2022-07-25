@@ -54,6 +54,10 @@
 #define ocaml_sheet_add_size_info "ocaml_sheet_add_size_info"
 #define ocaml_sheet_add_rem "ocaml_sheet_add_rem"
 
+void caml_wrapper_starup(char** argv){
+    caml_startup(argv);
+}
+
 duration drt_zero_frame() {
     CAMLparam0();
     static const value* closure = NULL;
