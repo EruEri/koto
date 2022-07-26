@@ -176,9 +176,12 @@ pub enum CueSheetSubcommand {
 
         #[clap(short, long, arg_enum)]
         format: cue_file_format,
-
+        /// Display album total duration
         #[clap(long)]
-        total_duration: bool
+        total_duration: bool,
+        /// output path where fetched album illustration will be created
+        #[clap(short, long)]
+        image: Option<String>
     },
 
     /// Create the cue sheet by giving the requiered information throught the command line
@@ -707,14 +710,14 @@ pub async fn run_edit(
 
 pub async fn run_cuesheet(cs_subcommand:  CueSheetSubcommand) {
     match cs_subcommand {
-        CueSheetSubcommand::Fetch { artist, album, album_id, output, cue_file_name, format, total_duration } => {
-            run_cuesheet_fetch(artist, album, album_id, output, cue_file_name, format, total_duration).await
+        CueSheetSubcommand::Fetch { artist, album, album_id, output, cue_file_name, format, total_duration, image } => {
+            run_cuesheet_fetch(artist, album, album_id, output, cue_file_name, format, total_duration, image).await
         },
         CueSheetSubcommand::Make {  } => todo!(),
     }
 }
 
-pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>, cue_file_name: String, format: cue_file_format, total_duration: bool) {
+pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>, cue_file_name: String, format: cue_file_format, total_duration: bool, image: Option<String>) {
     let spotify = Spotify::init().await;
 
     let album_id = if let Some(id) = album_id {
@@ -746,7 +749,7 @@ pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, a
             .clone()
         }
     };
-    if let Err(e) = util::cuesheet_from_album_id(cue_file_name, format, output, album_id.as_str(), total_duration).await {
+    if let Err(e) = util::cuesheet_from_album_id(cue_file_name, format, output, album_id.as_str(), total_duration, image).await {
         println!("{}", e);
         exit(1)
     }

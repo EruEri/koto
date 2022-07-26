@@ -114,7 +114,7 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, column : usi
     Some(())
 }
 
-pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_format, output: Option<String>, album_id: &str, total_duration: bool) -> Result<(), String> {
+pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_format, output: Option<String>, album_id: &str, total_duration: bool, image: Option<String>) -> Result<(), String> {
     // let mut argv = env::args().collect::<Vec<String>>();
     // let mut mapper_argv = argv.
     // iter_mut()
@@ -131,6 +131,14 @@ pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_forma
     filename.push('\0');
     let spotify = spotify::Spotify::init().await;
     let album = spotify.album(album_id.to_string()).await.ok_or( "Unable to fetch the album".to_string() )?;
+
+    if let Some(image_path) = image {
+        if let Some(map) = album.images.get(0) {
+            if let Some(url) = map.get("url").and_then( |url| url.as_str()) {
+                donwload_image(url).await.iter().for_each(|dyn_image| {dyn_image.save(image_path.as_str());});
+            }
+        }
+    }
     
     let mut cue_sheet = cue_sheet::new_empty_sheet(filename.as_str(), format);
     cue_sheet.add_title(album.name.as_str());
