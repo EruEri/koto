@@ -1,6 +1,6 @@
 
 
-use std::{cmp, fs::OpenOptions, io::Write, env};
+use std::{cmp, fs::OpenOptions, io::Write};
 
 use image::DynamicImage;
 use viuer::Config;
@@ -13,6 +13,14 @@ pub fn convert_mille_to_duration(milliemes: u64) -> duration {
     let minutes = secondes / 60;
     let secondes = secondes % 60;
     duration::minuts_seconde_milliemes_format(minutes as i32, secondes as i32, milliemes as i32)
+}
+
+fn min_sec_mil_of_millies(milliemes: u64) -> (u32, u32, u32) {
+    let secondes = milliemes / 1000;
+    let milliemes = milliemes % 1000;
+    let minutes = secondes / 60;
+    let secondes = secondes % 60;
+    (minutes as u32, minutes as u32, milliemes as u32)
 }
 
 pub(crate) async fn donwload_image(url : &str) -> Option<DynamicImage> {
@@ -106,19 +114,19 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, column : usi
     Some(())
 }
 
-pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_format, output: Option<String>, album_id: &str) -> Result<(), String> {
-    let mut argv = env::args().collect::<Vec<String>>();
-    let mut mapper_argv = argv.
-    iter_mut()
-    .map(|arg| {arg.push('\0'); arg})
-    .map(|arg| (arg.as_mut_ptr() as * mut i8))
-    .collect::<Vec<*mut i8>>();
-    mapper_argv.push("\0".as_ptr() as *mut i8);
-
-
+pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_format, output: Option<String>, album_id: &str, total_duration: bool) -> Result<(), String> {
+    // let mut argv = env::args().collect::<Vec<String>>();
+    // let mut mapper_argv = argv.
+    // iter_mut()
+    // .map(|arg| {arg.push('\0'); arg})
+    // .map(|arg| (arg.as_mut_ptr() as * mut i8))
+    // .collect::<Vec<*mut i8>>();
+    // mapper_argv.push("\0".as_ptr() as *mut i8);
     unsafe { 
         caml_wrapper_starup();
     }
+
+    let mut total = 0u64;
     
     filename.push('\0');
     let spotify = spotify::Spotify::init().await;
@@ -148,7 +156,7 @@ pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_forma
             str_artist.push('\0');
             let _ = cuetrack.add_performer(&str_artist.as_str());
         }
-
+        total += track.duration_ms;
         let mut c_track_name = track.name.clone();
         c_track_name.push('\0');
         cuetrack.add_index(1, convert_mille_to_duration(track.duration_ms));
@@ -156,6 +164,10 @@ pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_forma
 
         cue_sheet.add_track(&cuetrack);
     });
+    if total_duration {
+        let (minutes, secondes, milliemes) = min_sec_mil_of_millies(total);
+        println!("ALBUM DURATION : {:#2}:{:#2}:{:#3}", minutes, secondes, milliemes);
+    }
     let str_cuesheet = cue_sheet.to_format(true).ok_or("Cannot generate the string representation of the sheet")?;
     if let Some(output_path) = output {
         let _ = OpenOptions::new()

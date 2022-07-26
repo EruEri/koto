@@ -175,7 +175,10 @@ pub enum CueSheetSubcommand {
         cue_file_name: String,
 
         #[clap(short, long, arg_enum)]
-        format: cue_file_format
+        format: cue_file_format,
+
+        #[clap(long)]
+        total_duration: bool
     },
 
     /// Create the cue sheet by giving the requiered information throught the command line
@@ -704,14 +707,14 @@ pub async fn run_edit(
 
 pub async fn run_cuesheet(cs_subcommand:  CueSheetSubcommand) {
     match cs_subcommand {
-        CueSheetSubcommand::Fetch { artist, album, album_id, output, cue_file_name, format } => {
-            run_cuesheet_fetch(artist, album, album_id, output, cue_file_name, format).await
+        CueSheetSubcommand::Fetch { artist, album, album_id, output, cue_file_name, format, total_duration } => {
+            run_cuesheet_fetch(artist, album, album_id, output, cue_file_name, format, total_duration).await
         },
         CueSheetSubcommand::Make {  } => todo!(),
     }
 }
 
-pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>, cue_file_name: String, format: cue_file_format) {
+pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>, cue_file_name: String, format: cue_file_format, total_duration: bool) {
     let spotify = Spotify::init().await;
 
     let album_id = if let Some(id) = album_id {
@@ -743,7 +746,7 @@ pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, a
             .clone()
         }
     };
-    if let Err(e) = util::cuesheet_from_album_id(cue_file_name, format, output, album_id.as_str()).await {
+    if let Err(e) = util::cuesheet_from_album_id(cue_file_name, format, output, album_id.as_str(), total_duration).await {
         println!("{}", e);
         exit(1)
     }
