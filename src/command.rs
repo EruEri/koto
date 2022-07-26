@@ -1,18 +1,16 @@
 use clap::{ArgEnum, ArgGroup};
 use rusqlite::params;
-use std::{
-    fs::OpenOptions, io::Write, path::PathBuf, process::exit, str::FromStr, time::Duration,
-};
-use tag_edit::{PictureFormat, ID3TAG, FlacTag};
+use std::{fs::OpenOptions, io::Write, path::PathBuf, process::exit, str::FromStr, time::Duration};
+use tag_edit::{FlacTag, PictureFormat, ID3TAG};
 
 use clap::{Parser, Subcommand};
 
 use crate::{
     app_dir_pathbuf,
-    spotify::{Spotify, SpotifySearchType, SpotifyIncludeGroupe},
-    sql::ArtistDB, util,
+    spotify::{Spotify, SpotifyIncludeGroupe, SpotifySearchType},
+    sql::ArtistDB,
+    util,
 };
-
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -50,12 +48,12 @@ pub enum Subcommands {
         id: bool,
     },
     /// Search for an item
-    
+
     // #[clap(subcommand_precedence_over_arg = true)]
-    #[clap(subcommand_negates_reqs = true ,args_conflicts_with_subcommands = true)]
+    #[clap(subcommand_negates_reqs = true, args_conflicts_with_subcommands = true)]
     Search {
         #[clap(subcommand)]
-        search_subcommand : Option<SearchSubCommand>,
+        search_subcommand: Option<SearchSubCommand>,
         /// search for an artist
         #[clap(short, long)]
         artist: bool,
@@ -75,9 +73,9 @@ pub enum Subcommands {
         #[clap(long)]
         limit: Option<u8>,
 
-        /// Display graohic result (cover, picture, etc ...) 
+        /// Display graohic result (cover, picture, etc ...)
         #[clap(short, long)]
-        graphic : bool,
+        graphic: bool,
 
         /// offset the result
         #[clap(long)]
@@ -105,7 +103,6 @@ pub enum Subcommands {
     // .args(&["mp3", "flac"])
     // ))
     // ]
-
     /// Edit mp3 and flac file
     Edit {
         #[clap(long = "type", arg_enum)]
@@ -141,11 +138,43 @@ pub enum Subcommands {
         /// Audio file
         file: String,
     },
+
+    /// Create Cue Sheet File
+    CueSheet {
+        #[clap(subcommand)]
+        cs_subcommand: CueSheetSubcommand,
+    },
+}
+#[derive(Subcommand)]
+pub enum CueSheetSubcommand {
+    /// Create the cue sheet by fechting the requiered information on the spotify api
+    #[clap(group(
+        ArgGroup::new("names")
+            .required(false)
+            .multiple(true)
+            .args(&["artist", "album"])
+            .conflicts_with("album-id")
+            .requires_all(&["artist", "album"])
+            
+    )) ]
+    Fetch {
+        /// Artist name
+        #[clap(short, long)]
+        artist: Option<String>,
+        /// Album name
+        #[clap(long, alias = "al")]
+        album: Option<String>,
+        /// Album spotify Id 
+        #[clap(long, alias = "id")]
+        album_id: Option<String>,
+    },
+
+    /// Create the cue sheet by giving the requiered information throught the command line
+    Make {},
 }
 
 #[derive(Subcommand)]
-pub enum SearchSubCommand  {
-
+pub enum SearchSubCommand {
     // #[clap(groups(
     //     vec![
     //         ArgGroup::new("search_type")
@@ -153,8 +182,6 @@ pub enum SearchSubCommand  {
     //         .args(&["albums", "related_artists"])
     //     ]
     // )) ]
-
-
     /// Search content related to an artist
     #[clap(group(
             ArgGroup::new("search_type")
@@ -162,39 +189,32 @@ pub enum SearchSubCommand  {
             .args(&["albums"])
             .conflicts_with("related_artists")
     )) ]
-    
     Artist {
         #[clap(short, long)]
         /// Search artist's albums
-        albums : bool,
+        albums: bool,
         #[clap(long)]
         /// Search related artists
-        related_artists : bool,
+        related_artists: bool,
         #[clap(long)]
         /// Search by artist id
-        id : bool,
-         #[clap(short, long)]
+        id: bool,
+        #[clap(short, long)]
         /// Display graohic result (cover, picture, etc ...)
-        graphic : bool,
+        graphic: bool,
         #[clap(short, long, default_value_t = 3)]
         /// Result limit
-        limit : u32,
+        limit: u32,
         /// Output column
         #[clap(short, long, default_value_t = 1)]
-        column : usize,
+        column: usize,
         /// Search item
-        artist : String,
-
+        artist: String,
     },
     /// Search content related to an album
-    Album {
-
-    },
+    Album {},
     /// Search content related to a track
-    Track {
-
-    },
-
+    Track {},
 }
 #[derive(Clone, Copy, Debug, ArgEnum)]
 pub enum FileType {
@@ -226,7 +246,10 @@ pub async fn run_list_modify(id: bool, delete: bool, name: String) -> Option<()>
         match ArtistDB::insert_db(&artist) {
             Ok(u) => {
                 if u == 1 {
-                    println!("Operation Succesed\n{} added to the database", artist.artist_name);
+                    println!(
+                        "Operation Succesed\n{} added to the database",
+                        artist.artist_name
+                    );
                 }
             }
             Err(e) => {
@@ -365,7 +388,7 @@ pub async fn run_search(
     track: bool,
     market: Option<String>,
     limit: Option<u8>,
-    graphic : bool,
+    graphic: bool,
     offset: Option<u32>,
     item: String,
 ) -> Option<()> {
@@ -396,7 +419,7 @@ pub async fn run_search(
     for (_, ssr) in result.iter() {
         if ssr.items.is_empty() {
             println!("\n****   No Result   ****\n")
-        }else {
+        } else {
             ssr.show_spotify_search_result(graphic).await;
         }
     }
@@ -405,50 +428,118 @@ pub async fn run_search(
     Some(())
 }
 
-pub(crate) async fn run_search_subcommand(search : SearchSubCommand) -> Option<()>{
+pub(crate) async fn run_search_subcommand(search: SearchSubCommand) -> Option<()> {
     match search {
-        SearchSubCommand::Artist { albums, related_artists, id,graphic, limit, column ,artist } => {
-            run_artist_search(albums, related_artists, id, graphic, limit, column, artist).await
-        },
-        SearchSubCommand::Album {  } => todo!(),
-        SearchSubCommand::Track {  } => todo!(),
+        SearchSubCommand::Artist {
+            albums,
+            related_artists,
+            id,
+            graphic,
+            limit,
+            column,
+            artist,
+        } => run_artist_search(albums, related_artists, id, graphic, limit, column, artist).await,
+        SearchSubCommand::Album {} => todo!(),
+        SearchSubCommand::Track {} => todo!(),
     }
 }
 
-pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, graphic : bool, limit : u32, column : usize, query : String) -> Option<()>{
+pub async fn run_artist_search(
+    albums: bool,
+    related_artists: bool,
+    id: bool,
+    graphic: bool,
+    limit: u32,
+    column: usize,
+    query: String,
+) -> Option<()> {
     let spotify = Spotify::init().await;
-    let artist_id = if id { query } else {
-        let result = spotify.search(query.as_str(), vec![SpotifySearchType::Artist], 
-        None, Some(1), Some(0), None).await.unwrap_or_else(|| {println!("Wrong Api Response"); exit(1)});
-        let items = result.get(&crate::spotify::SpotifySearchKey::Artists).unwrap_or_else(|| {println!("Unable to get the artist"); exit(1)});
-        let mut vec_artist_id = items.items.iter().filter_map(|ssri|{
-            match ssri {
-                
-                crate::spotify::SpotifySearchResultItem::Artist { external_urls: _, followers:_, genres:_, href:_, id, images:_, name:_, popularity:_, artist_type:_, uri:_ } => {
-                    Some(id.clone())
-                },
-                _ => None
-            }
-        }).collect::<Vec<String>>();
+    let artist_id = if id {
+        query
+    } else {
+        let result = spotify
+            .search(
+                query.as_str(),
+                vec![SpotifySearchType::Artist],
+                None,
+                Some(1),
+                Some(0),
+                None,
+            )
+            .await
+            .unwrap_or_else(|| {
+                println!("Wrong Api Response");
+                exit(1)
+            });
+        let items = result
+            .get(&crate::spotify::SpotifySearchKey::Artists)
+            .unwrap_or_else(|| {
+                println!("Unable to get the artist");
+                exit(1)
+            });
+        let mut vec_artist_id = items
+            .items
+            .iter()
+            .filter_map(|ssri| match ssri {
+                crate::spotify::SpotifySearchResultItem::Artist {
+                    external_urls: _,
+                    followers: _,
+                    genres: _,
+                    href: _,
+                    id,
+                    images: _,
+                    name: _,
+                    popularity: _,
+                    artist_type: _,
+                    uri: _,
+                } => Some(id.clone()),
+                _ => None,
+            })
+            .collect::<Vec<String>>();
         if !vec_artist_id.is_empty() {
             vec_artist_id.remove(0)
-        }else { println!("No artist returned"); exit(1) }
+        } else {
+            println!("No artist returned");
+            exit(1)
+        }
     };
     match (albums, related_artists) {
         (true, true) => unreachable!("Albums and Related are mutualy exclued"),
         (true, false) => {
-            let albums = spotify.artist_album(artist_id, vec![SpotifyIncludeGroupe::Album, ], Some(limit), None, None).await.unwrap_or_else( || { println!("Unable to fetch the related artist"); exit(1)} );
-        },
+            let albums = spotify
+                .artist_album(
+                    artist_id,
+                    vec![SpotifyIncludeGroupe::Album],
+                    Some(limit),
+                    None,
+                    None,
+                )
+                .await
+                .unwrap_or_else(|| {
+                    println!("Unable to fetch the related artist");
+                    exit(1)
+                });
+        }
         (false, true) => {
-            let related_artists = spotify.related_artists(&artist_id).await.unwrap_or_else(|| { println!("Unable to fetch the related artist"); exit(1) });
-            return util::display_related_artist(&related_artists, column, limit as usize, graphic).await;
-        },
+            let related_artists = spotify
+                .related_artists(&artist_id)
+                .await
+                .unwrap_or_else(|| {
+                    println!("Unable to fetch the related artist");
+                    exit(1)
+                });
+            return util::display_related_artist(&related_artists, column, limit as usize, graphic)
+                .await;
+        }
         (false, false) => {
-            let artist = spotify.artist(artist_id.as_str()).await.unwrap_or_else(|| {println!("Unable to retrieve the artist"); exit(1)});
+            let artist = spotify.artist(artist_id.as_str()).await.unwrap_or_else(|| {
+                println!("Unable to retrieve the artist");
+                exit(1)
+            });
             println!("Name  : {}", artist.name);
             println!("Genre : {}", artist.genres.join("\n        "));
-            if let Some(map)  = artist.images.get(0){
-                if let Some(url) = map.get("url"){
+            if let Some(map) = artist.images.get(0) {
+                if let Some(url) = map.get("url") {
                     let url = url.as_str().unwrap();
                     let dyn_image = util::donwload_image(url).await;
                     if let Some(image) = dyn_image {
@@ -456,10 +547,9 @@ pub async fn run_artist_search(albums: bool, related_artists : bool, id : bool, 
                     }
                 }
             }
-        },
+        }
     }
     Some(())
-
 }
 
 // ------------------------  Edit  ------------------------ \\
@@ -507,21 +597,29 @@ pub async fn run_edit(
                         .extension()
                         .map(|os| os.to_str())
                         .unwrap_or_else(|| Some(""))?;
-                    let _ = id3tag.add_picture_from_file(
-                        image.as_str(),
-                        PictureFormat::OTHER(extension.to_string()),
-                        None,
-                        None,
-                    ).ok().unwrap_or_else(|| { println!("Unable to add the picture"); exit(1) });
+                    let _ = id3tag
+                        .add_picture_from_file(
+                            image.as_str(),
+                            PictureFormat::OTHER(extension.to_string()),
+                            None,
+                            None,
+                        )
+                        .ok()
+                        .unwrap_or_else(|| {
+                            println!("Unable to add the picture");
+                            exit(1)
+                        });
                 }
             }
             if let Some(output) = output {
                 let _ = id3tag.write_tag(output.as_str()).unwrap_or_else(|_| {
-                    println!("Unable to write the file"); exit(1)
+                    println!("Unable to write the file");
+                    exit(1)
                 });
-            }else {
+            } else {
                 let _ = id3tag.overwrite_tag().unwrap_or_else(|_| {
-                    println!("Unable to write the file"); exit(1)
+                    println!("Unable to write the file");
+                    exit(1)
                 });
             }
             Some(())
@@ -558,23 +656,48 @@ pub async fn run_edit(
                         .map(|os| os.to_str().unwrap().to_string())
                         .unwrap_or_else(|| String::new());
 
-                    let _ = flac.add_picture_from_path(
-                        &image.as_str(), tag_edit::PictureType::Other, PictureFormat::OTHER(extension), None, 
-                        400, 400, 16, None)
-                        .ok().unwrap_or_else(|| {println!("Unable to add the picture"); exit(1)});
+                    let _ = flac
+                        .add_picture_from_path(
+                            &image.as_str(),
+                            tag_edit::PictureType::Other,
+                            PictureFormat::OTHER(extension),
+                            None,
+                            400,
+                            400,
+                            16,
+                            None,
+                        )
+                        .ok()
+                        .unwrap_or_else(|| {
+                            println!("Unable to add the picture");
+                            exit(1)
+                        });
                 }
             }
 
             if let Some(output) = output {
                 let _ = flac.write_flac(output.as_str()).unwrap_or_else(|_| {
-                    println!("Unable to write the file"); exit(1)
+                    println!("Unable to write the file");
+                    exit(1)
                 });
-            }else {
+            } else {
                 let _ = flac.overwrite_flac().unwrap_or_else(|_| {
-                    println!("Unable to write the file"); exit(1)
+                    println!("Unable to write the file");
+                    exit(1)
                 });
             }
             Some(())
+        }
+    }
+}
+
+// ------------------------  CueSheet  ------------------------ \\
+
+pub async fn run_cuesheet(cs_subcommand:  CueSheetSubcommand) {
+    match cs_subcommand {
+        CueSheetSubcommand::Fetch { artist, album, album_id } => {
+
         },
+        CueSheetSubcommand::Make {  } => todo!(),
     }
 }

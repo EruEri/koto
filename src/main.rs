@@ -1,7 +1,7 @@
 use std::{ffi::CStr, os::raw::c_char, path::PathBuf, process::exit};
 
 use clap::StructOpt;
-use command::{run_init, run_list, run_search, Main, run_edit};
+use command::{run_init, run_list, run_search, Main, run_edit, run_cuesheet};
 
 
 mod command;
@@ -84,8 +84,12 @@ async fn main() {
                 file,
             } => {
                 let _ = run_edit(file_type, title, artist, album, artist_album, year, bpm, track_position, images, output, file).await;
-
             },
+            command::Subcommands::CueSheet { 
+                cs_subcommand
+            } => {
+                let _ = run_cuesheet(cs_subcommand).await;
+            }
         },
     }
 }
