@@ -135,6 +135,11 @@ pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_forma
     let mut cue_sheet = cue_sheet::new_empty_sheet(filename.as_str(), format);
     cue_sheet.add_title(album.name.as_str());
 
+    if !album.artists.is_empty() {
+        let mut album_artist = album.artists.iter().map(|artist| artist.name.clone()).collect::<Vec<String>>().join(", ");
+        album_artist.push('\0');
+        cue_sheet.add_performer(album_artist.as_str());
+    }
     
     if let Some(Some(genres)) = album.genres {
         if !genres.is_empty() {
