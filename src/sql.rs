@@ -178,9 +178,9 @@ impl ArtistDB {
 #[derive(Debug, PartialEq, Eq)]
 #[repr(C)]
 pub struct Date {
-    day : u8,
-    month : u8,
-    year : i16,
+    pub day : u8,
+    pub month : u8,
+    pub year : i16,
 }
 
 

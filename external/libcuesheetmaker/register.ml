@@ -41,3 +41,4 @@ let () = Callback.register "ocaml_sheet_add_toc_info" Cue_sheet_maker.CueSheet.a
 let () = Callback.register "ocaml_sheet_add_toc_info2" Cue_sheet_maker.CueSheet.add_toc_info2
 let () = Callback.register "ocaml_sheet_add_size_info" Cue_sheet_maker.CueSheet.add_size_info
 let () = Callback.register "ocaml_sheet_add_rem" Cue_sheet_maker.CueSheet.add_rem
+let () = Callback.register "ocaml_sheet_add_track" Cue_sheet_maker.CueSheet.add_track

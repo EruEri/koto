@@ -28,9 +28,9 @@ async fn main() {
     // let client_secret = std::env::var("CLIENT_SECRET").unwrap();
     // let token = crate::spotify::Token::new(client_id.as_str(), client_secret.as_str()).await.unwrap();
     // let spotify = spotify::Spotify::new(&token);
-    let spotify = spotify::Spotify::init().await;
-    let result = spotify.album("39UmoCVQLTqseM8uksxdVm".to_string()).await;
-    println!("{:?}", result);
+    // let spotify = spotify::Spotify::init().await;
+    // let result = spotify.album("39UmoCVQLTqseM8uksxdVm".to_string()).await;
+    // println!("{:?}", result);
     // let search = spotify.search("LiSA", vec![spotify::SpotifySearchType::Track, spotify::SpotifySearchType::Artist], None, Some(10), None, None).await;
     // println!("{:?}", token);
     //println!("{:?}", search);

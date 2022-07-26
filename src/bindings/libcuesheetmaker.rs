@@ -1,10 +1,13 @@
 use std::ffi::CStr;
 
+use clap::ArgEnum;
+
 type value = std::os::raw::c_long;
 
 
 extern "C" {
-    pub fn caml_wrapper_starup(argv: *mut *mut ::std::os::raw::c_char);
+    pub fn caml_wrapper_starup_argv(argv: *mut *mut ::std::os::raw::c_char);
+    pub fn caml_wrapper_starup(/*argv: *mut *mut ::std::os::raw::c_char*/);
 }
 extern "C" {
     pub fn drt_zero_frame() -> duration;
@@ -50,7 +53,7 @@ extern "C" {
     ) -> *mut cue_track;
 }
 extern "C" {
-    pub fn cuetrack_add_index(track: *mut cue_track, duration: duration) -> *mut cue_track;
+    pub fn cuetrack_add_index(track: *mut cue_track, time_index: ::std::os::raw::c_int, duration: duration) -> *mut cue_track;
 }
 extern "C" {
     pub fn cuetrack_add_arranger(
@@ -220,7 +223,7 @@ extern "C" {
     ) -> *mut cue_sheet;
 }
 extern "C" {
-    pub fn cuesheet_add_track(sheet: *mut cue_sheet, track: *mut cue_track) -> *mut cue_sheet;
+    pub fn cuesheet_add_track(sheet: *mut cue_sheet, track: *const cue_track) -> *mut cue_sheet;
 }
 extern "C" {
     pub fn cue_sheet_export(
@@ -292,9 +295,9 @@ impl cue_track {
         }
     }
 
-    pub fn add_index(&mut self, duration: duration) -> &mut Self {
+    pub fn add_index(&mut self, time_index: i32, duration: duration) -> &mut Self {
         unsafe {
-            &mut *(cuetrack_add_index(self as *mut Self, duration))
+            &mut *(cuetrack_add_index(self as *mut Self, time_index, duration))
         }
     }
 
@@ -345,7 +348,7 @@ impl cue_track {
 
     pub fn add_title(&mut self, title: &str) -> &mut Self {
         unsafe {
-            &mut *(cuetrack_add_songwriter(self as *mut Self, title.as_ptr() as *const i8))
+            &mut *(cuetrack_add_title(self as *mut Self, title.as_ptr() as *const i8))
         }
     }
 
@@ -468,7 +471,7 @@ impl cue_sheet {
 
     pub fn add_title(&mut self, title: &str) -> &mut Self {
         unsafe {
-            &mut *(cuesheet_add_songwriter(self as *mut Self, title.as_ptr() as *const i8))
+            &mut *(cuesheet_add_title(self as *mut Self, title.as_ptr() as *const i8))
         }
     }
 
@@ -495,10 +498,17 @@ impl cue_sheet {
             &mut *(cuesheet_add_rem(self as *mut Self, key.as_ptr() as *const i8, val.as_ptr() as *const i8))
         }
     }
+
+    pub fn add_track(&mut self, track: &cue_track) -> &mut Self {
+        unsafe {
+            &mut *(cuesheet_add_track(self as *mut Self, track as *const cue_track) )
+        }
+    }
 }
 
 
 #[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, ArgEnum)]
 #[repr(C)]
 pub enum cue_file_format {
     BINARY = 0,

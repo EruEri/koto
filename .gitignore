@@ -4,3 +4,8 @@ new_song_db_copie.sqlite
 new_song_db.sqlite
 .DS_Store
 /test
+/external/product
+/external/libcuesheetmaker/product
+/external/libcuesheetmaker/tmp
+/external/libcuesheetmaker/*.cm*
+/external/libcuesheetmaker/*.o

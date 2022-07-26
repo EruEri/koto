@@ -53,9 +53,15 @@
 #define ocaml_sheet_add_toc_info2 "ocaml_sheet_add_toc_info2"
 #define ocaml_sheet_add_size_info "ocaml_sheet_add_size_info"
 #define ocaml_sheet_add_rem "ocaml_sheet_add_rem"
+#define ocaml_sheet_add_track "ocaml_sheet_add_track"
 
-void caml_wrapper_starup(char** argv){
+void caml_wrapper_starup_argv(char** argv){
     caml_startup(argv);
+}
+
+void caml_wrapper_starup(){
+    char* fake[2] = { "", NULL };
+    caml_startup( fake );
 }
 
 duration drt_zero_frame() {
@@ -136,12 +142,16 @@ cue_track* cuetrack_add_postgap(cue_track* track, duration duration) {
     return track;
 }
 
-cue_track* cuetrack_add_index(cue_track* track, duration duration) {
+cue_track* cuetrack_add_index(cue_track* track, int time_index, duration duration) {
     CAMLparam0();
     if (!track) return track;
+    CAMLlocal1(tuple);
+    tuple = caml_alloc(2, 0);
+    Store_field(tuple, 0, Val_int(time_index));
+    Store_field(tuple, 1, duration.sheet);
     static const value* closure = NULL;
     if (!closure) closure = caml_named_value(ocaml_track_add_index);
-    track->track = caml_callback2(*closure, duration.sheet, track->track);
+    track->track = caml_callback2(*closure, tuple, track->track);
     return track;
 }
 
@@ -291,10 +301,12 @@ const char* string_of_cue_sheet(cue_sheet* sheet, int sum) {
     if (!sheet) return NULL;
 
     CAMLparam0();
-    CAMLlocal1(str_value);
+    CAMLlocal2(str_value, option);
+    option = caml_alloc(1, 0);
+    Store_field(option, 0, Val_bool(sum ? 1 : 0));
     static const value* closure = NULL;
     if (!closure) closure = caml_named_value(ocaml_string_of_cue_sheet);
-    str_value = caml_callback2(*closure, Val_int(sum ? 1 : 0), sheet->sheet);
+    str_value = caml_callback2(*closure, option, sheet->sheet);
     return String_val(str_value);
 }
 
@@ -434,7 +446,7 @@ cue_sheet* cuesheet_add_track(cue_sheet* sheet, cue_track* track) {
     CAMLparam0();
     if (!sheet || !track) return sheet;
     static const value* closure = NULL;
-    if (!closure) closure = caml_named_value(ocaml_sheet_add_rem);
+    if (!closure) closure = caml_named_value(ocaml_sheet_add_track);
     sheet->sheet = caml_callback2(*closure, track->track, sheet->sheet);
     return sheet;
 }

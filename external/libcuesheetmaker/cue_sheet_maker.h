@@ -43,7 +43,9 @@ typedef struct {
     value track;
 } cue_track;
 
-void caml_wrapper_starup(char** argv);
+
+void caml_wrapper_starup();
+void caml_wrapper_starup_argv(char** argv);
 
 duration drt_zero_frame();
 duration drt_minuts_seconde_format(int minutes, int secondes);
@@ -56,7 +58,7 @@ cue_track create_empty_track(int track_position, cue_track_mode mode);
 cue_track* cuetrack_add_pregap(cue_track* track, duration duration);
 cue_track* cuetrack_add_postgap(cue_track* track, duration duration);
 cue_track* cuetrack_add_iscr(cue_track* track, const char* iscr);
-cue_track* cuetrack_add_index(cue_track* track, duration duration);
+cue_track* cuetrack_add_index(cue_track* track, int time_index, duration duration);
 cue_track* cuetrack_add_arranger(cue_track* sheet, const char* arranger);
 cue_track* cuetrack_add_composer(cue_track* sheet, const char* composer);
 cue_track* cuetrack_add_disc_id(cue_track* sheet, const char* disc_id);

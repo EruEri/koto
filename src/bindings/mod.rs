@@ -1,1 +1,1 @@
-mod libcuesheetmaker;
+pub mod libcuesheetmaker;

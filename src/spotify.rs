@@ -703,13 +703,13 @@ pub struct SpotifySearchTrackAlbum {
 
 #[derive(Debug, Deserialize)]
 pub struct SpotifySearchAlbumArtist {
-    external_urls: HashMap<String, String>,
-    href: String,
-    id: String,
-    name: String,
+    pub(crate) external_urls: HashMap<String, String>,
+    pub(crate) href: String,
+    pub(crate) id: String,
+    pub(crate) name: String,
     #[serde(rename = "type")]
-    r_type: String,
-    uri: String,
+    pub(crate) r_type: String,
+    pub(crate) uri: String,
 }
 
 impl SpotifySearchResultItem {

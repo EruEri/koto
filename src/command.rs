@@ -9,7 +9,7 @@ use crate::{
     app_dir_pathbuf,
     spotify::{Spotify, SpotifyIncludeGroupe, SpotifySearchType},
     sql::ArtistDB,
-    util,
+    util, bindings::libcuesheetmaker::cue_file_format,
 };
 
 #[derive(Parser)]
@@ -169,7 +169,13 @@ pub enum CueSheetSubcommand {
         album_id: Option<String>,
         /// Output file
         #[clap(short, long, help = "Output file [stdout if not present]")]
-        output: Option<String>
+        output: Option<String>,
+
+        #[clap(long, alias = "cfn", default_value = "")]
+        cue_file_name: String,
+
+        #[clap(short, long, arg_enum)]
+        format: cue_file_format
     },
 
     /// Create the cue sheet by giving the requiered information throught the command line
@@ -698,19 +704,47 @@ pub async fn run_edit(
 
 pub async fn run_cuesheet(cs_subcommand:  CueSheetSubcommand) {
     match cs_subcommand {
-        CueSheetSubcommand::Fetch { artist, album, album_id, output } => {
-            run_cuesheet_fetch(artist, album, album_id, output).await
+        CueSheetSubcommand::Fetch { artist, album, album_id, output, cue_file_name, format } => {
+            run_cuesheet_fetch(artist, album, album_id, output, cue_file_name, format).await
         },
         CueSheetSubcommand::Make {  } => todo!(),
     }
 }
 
-pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>) {
+pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>, cue_file_name: String, format: cue_file_format) {
     let spotify = Spotify::init().await;
-    if let Some(album_id) = album_id {
 
+    let album_id = if let Some(id) = album_id {
+        id
     } else {
         let artist = artist.unwrap();
         let album = album.unwrap();
+        match spotify.search(format!("{} {}", album, artist).as_str(), vec![SpotifySearchType::Album], None, Some(1), None, None).await {
+            None => {
+                println!("No Resultat");
+                exit(1)
+            },
+            Some(result) => {
+                let data = result.get(&crate::spotify::SpotifySearchKey::Albums).unwrap_or_else(|| {println!("Unable to fetch the artist"); exit(1)});
+                data.items.iter().filter_map(|ssri| {
+                    match ssri {
+                        crate::spotify::SpotifySearchResultItem::Album { album_type: _, artists: _, 
+                            external_urls: _, available_markets: _, 
+                            href: _, id, images: _, name: _, 
+                            release_date: _, release_date_precision: _, total_tracks: _, a_type: _, uri: _ } => { Some(id.clone()) },
+                            _ => None
+                    }
+                    
+                })
+            }
+            .collect::<Vec<String>>()
+            .first()
+            .unwrap_or_else(|| { println!("Unable to get the artist Id"); exit(1)})
+            .clone()
+        }
+    };
+    if let Err(e) = util::cuesheet_from_album_id(cue_file_name, format, output, album_id.as_str()).await {
+        println!("{}", e);
+        exit(1)
     }
 }
