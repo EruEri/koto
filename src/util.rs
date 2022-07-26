@@ -5,7 +5,7 @@ use std::cmp;
 use image::DynamicImage;
 use viuer::Config;
 
-use crate::spotify::Artist;
+use crate::spotify::{Artist, self};
 
 pub(crate) async fn donwload_image(url : &str) -> Option<DynamicImage> {
     let image_bytes = reqwest::get(url).await.ok()?.bytes().await.ok()?;
@@ -96,4 +96,10 @@ pub (crate) async fn display_related_artist(artists : &Vec<Artist>, column : usi
         }
     }
     Some(())
+}
+
+pub async fn cuesheet_from_album_id(album_id: &str) -> Result<(), String> {
+    let spotify = spotify::Spotify::init().await;
+    // let album = 
+    Ok(())
 }

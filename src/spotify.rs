@@ -2,8 +2,8 @@
 
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
-use viuer::resize;
 use std::{collections::HashMap, fmt::Display, process::exit};
+use viuer::resize;
 
 use base64::encode;
 use reqwest::{RequestBuilder, StatusCode};
@@ -254,6 +254,19 @@ impl Spotify {
         }
     }
 
+    pub async fn album(&self, album_id: String) -> Option<Album> {
+        let rb = self.setup_url_request(
+            &SpotifyRessourceType::Album, vec![album_id], 
+            None, None, None, vec![]);
+            rb.
+            send()
+            .await
+            .ok()?
+            .json()
+            .await
+            .ok()
+    }
+
     pub async fn _artists(&self, artist_ids: Vec<String>) -> Option<Vec<Value>> {
         let rb = self.setup_url_request(
             &SpotifyRessourceType::Artist,
@@ -269,6 +282,23 @@ impl Spotify {
             None
         }
     }
+    pub async fn album_tracks(&self, album_id: String) -> Option<SpotifyAlbumTrackResult> {
+        let rb = self.setup_url_request(
+            &SpotifyRessourceType::AlbumTrack,
+            vec![album_id],
+            None,
+            Some(50),
+            None,
+            vec![],
+        );
+        rb
+        .send()
+        .await
+        .ok()?
+        .json()
+        .await
+        .ok()
+    }
     pub async fn artist_album(
         &self,
         artist_id: String,
@@ -276,7 +306,7 @@ impl Spotify {
         limit: Option<u32>,
         market: Option<String>,
         offset: Option<u32>,
-    ) -> Option<Album> {
+    ) -> Option<ArtistAlbum> {
         let rb = self.setup_url_request(
             &SpotifyRessourceType::ArtistAlbum,
             vec![artist_id],
@@ -286,7 +316,7 @@ impl Spotify {
             included_genre,
         );
         if let Ok(response) = rb.send().await {
-            response.json::<Album>().await.ok()
+            response.json::<ArtistAlbum>().await.ok()
         } else {
             None
         }
@@ -301,10 +331,11 @@ impl Spotify {
             vec![],
         );
         if let Ok(response) = rb.send().await {
-            let map = response.json::<HashMap<SpotifySearchKey, Vec<Artist>>>().await.ok()?;
-            map.into_iter()
-            .map(|(k,v)| v)
-            .find(|_| true)
+            let map = response
+                .json::<HashMap<SpotifySearchKey, Vec<Artist>>>()
+                .await
+                .ok()?;
+            map.into_iter().map(|(k, v)| v).find(|_| true)
         } else {
             None
         }
@@ -332,20 +363,39 @@ impl Spotify {
     }
 
     pub async fn get_artist_id(&self, artist_name: String) -> Option<String> {
-        let result = self.search(artist_name.as_str(), vec![SpotifySearchType::Artist], 
-        None, Some(1), Some(0), None).await?;
+        let result = self
+            .search(
+                artist_name.as_str(),
+                vec![SpotifySearchType::Artist],
+                None,
+                Some(1),
+                Some(0),
+                None,
+            )
+            .await?;
         let items = result.get(&crate::spotify::SpotifySearchKey::Artists)?;
-        let mut vec_artist_id = items.items.iter().filter_map( |ssri|
-            match ssri {
-                crate::spotify::SpotifySearchResultItem::Artist { external_urls, followers, genres, href, id, images, name, popularity, artist_type, uri } => {
-                    Some(id.clone())
-                },
-                _ => None
-            }
-        ).collect::<Vec<String>>();
+        let mut vec_artist_id = items
+            .items
+            .iter()
+            .filter_map(|ssri| match ssri {
+                crate::spotify::SpotifySearchResultItem::Artist {
+                    external_urls,
+                    followers,
+                    genres,
+                    href,
+                    id,
+                    images,
+                    name,
+                    popularity,
+                    artist_type,
+                    uri,
+                } => Some(id.clone()),
+                _ => None,
+            })
+            .collect::<Vec<String>>();
         if !vec_artist_id.is_empty() {
             Some(vec_artist_id.remove(0))
-        }else {
+        } else {
             None
         }
     }
@@ -400,6 +450,43 @@ impl Display for SpotifySearchType {
         write!(f, "{}", s)
     }
 }
+#[derive(Debug, Deserialize)]
+pub struct Copyrights {
+    text: String,
+    #[serde(rename = "type")]
+    c_type: String
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Album {
+    pub(crate) album_type: String,
+    pub(crate) artists: Vec<SpotifySearchAlbumArtist>,
+    #[serde(default, with="serde_with::rust::double_option")]
+    pub(crate) available_markets: Option<Option<Vec<String>>>,
+    #[serde(default, with="serde_with::rust::double_option")]
+    pub(crate) copyrights: Option<Option<Vec<Copyrights>>>,
+    #[serde(default, with="serde_with::rust::double_option")]
+    pub(crate) external_ids: Option<Option<HashMap<String, String>>>,
+    pub(crate) external_urls: HashMap<String, String>,
+    #[serde(default, with="serde_with::rust::double_option")]
+    pub(crate) genres: Option<Option<Vec<String>>>,
+    pub(crate) href: String,
+    pub(crate) id: String,
+    pub(crate) images: Vec<HashMap<String, Value>>,
+    #[serde(default, with="serde_with::rust::double_option")]
+    pub(crate) label: Option<Option<String>>,
+    pub(crate) name: String,
+    pub(crate) popularity: Option<Option<i32>>,
+    pub(crate) release_date: String,
+    pub(crate) release_date_precision: String,
+    pub(crate) total_tracks: u32,
+    pub(crate) tracks: SpotifyAlbumTrackResult,
+    #[serde(default, with="serde_with::rust::double_option")]
+    pub(crate) restrictions: Option<Option<HashMap<String, Value>>>,
+    #[serde(rename = "type")]
+    pub(crate) a_type: String,
+    pub(crate) uri: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Artist {
@@ -417,18 +504,24 @@ pub struct Artist {
 }
 
 impl Artist {
-    pub (crate) async fn dynamic_image(&self) -> Option<DynamicImage>{
+    pub(crate) async fn dynamic_image(&self) -> Option<DynamicImage> {
         let url = self.images.get(0)?.get("url")?.as_str()?;
         util::donwload_image(url).await
     }
 
-    pub(crate) async fn dynamic_image_resize(&self, nwidth : Option<u32>, nheight : Option<u32>) -> Option<DynamicImage>{
-        self.dynamic_image().await.map(|image|  resize(&image, nwidth, nheight))
+    pub(crate) async fn dynamic_image_resize(
+        &self,
+        nwidth: Option<u32>,
+        nheight: Option<u32>,
+    ) -> Option<DynamicImage> {
+        self.dynamic_image()
+            .await
+            .map(|image| resize(&image, nwidth, nheight))
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Album {
+pub struct ArtistAlbum {
     pub(crate) href: String,
     pub(crate) items: Vec<AlbumItems>,
     pub(crate) limit: u8,
@@ -502,6 +595,36 @@ pub struct SpotifySearchResult {
     pub(crate) offset: u32,
     pub(crate) previous: Option<String>,
     pub(crate) total: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SpotifyAlbumTrackResult {
+    pub(crate) href: String,
+    pub(crate) items: Vec<TrackAlbum>,
+    pub(crate) limit: u8,
+    pub(crate) next: Option<String>,
+    pub(crate) offset: u32,
+    pub(crate) previous: Option<String>,
+    pub(crate) total: u32,
+}
+#[derive(Debug, Deserialize)]
+pub struct TrackAlbum {
+    pub(crate) artists: Vec<SpotifySearchAlbumArtist>,
+    #[serde(default, with = "serde_with::rust::double_option")]
+    pub(crate) available_markets: Option<Option<Vec<String>>>,
+    pub(crate) disc_number: u16,
+    pub(crate) duration_ms: u64,
+    pub(crate) explicit: bool,
+    pub(crate) external_urls: HashMap<String, String>,
+    pub(crate) href: String,
+    pub(crate) id: String,
+    pub(crate) is_local: bool,
+    pub(crate) name: String,
+    pub(crate) preview_url: String,
+    pub(crate) track_number: u16,
+    #[serde(rename = "type")]
+    pub(crate) _type: String,
+    pub(crate) uri: String
 }
 
 #[derive(Debug, Deserialize)]
@@ -648,7 +771,6 @@ impl SpotifySearchResultItem {
                 artist_type: _,
                 uri: _,
             } => {
-
                 s.push_str(format!("****   Artist Name   : {}\n", name).as_str());
                 s.push_str(format!("****   Artist ID     : {}\n", id).as_str());
                 let genres = genres.join("\n                     : ");
@@ -681,8 +803,7 @@ impl SpotifySearchResultItem {
                     format!(
                         "****   Artist{}       {}: {}  := ID : {}\n",
                         if couple_total > 1 { "s" } else { "" },
-                        if couple_total > 1 { "" } else { " "}
-                        ,
+                        if couple_total > 1 { "" } else { " " },
                         name,
                         id
                     )
@@ -691,12 +812,12 @@ impl SpotifySearchResultItem {
                 s.push_str(format!("****   Release Date  : {}\n", release_date).as_str());
                 s.push_str(format!("****   Total Tracks  : {}\n", total_tracks).as_str());
                 s.push_str(format!("****   Album Type    : {}\n", album_type).as_str());
-            },
+            }
         }
         s
     }
 
-    pub async fn show_result(&self, graphic : bool) -> Option<()> {
+    pub async fn show_result(&self, graphic: bool) -> Option<()> {
         // print!("\n\n");
         match self {
             SpotifySearchResultItem::Track {
@@ -727,11 +848,11 @@ impl SpotifySearchResultItem {
                 let couple_total = couples.len();
                 let (name, id) = couples.remove(0);
                 print!(
-                        "****   Artist{}      : {}  := ID : {}\n",
-                        if couple_total > 1 { "s" } else { "" },
-                        name,
-                        id
-                    );
+                    "****   Artist{}      : {}  := ID : {}\n",
+                    if couple_total > 1 { "s" } else { "" },
+                    name,
+                    id
+                );
                 couples.iter().for_each(|(s_name, s_id)| {
                     print!("                     : {}  := ID : {}\n", s_name, s_id)
                 });
@@ -740,10 +861,9 @@ impl SpotifySearchResultItem {
                     let url_album = album.images.get(0)?.get("url")?.as_str()?;
                     util::show_image(&util::donwload_image(url_album).await?);
                     Some(println!("\n\n"))
-                }else {
+                } else {
                     Some(())
                 }
-                
             }
             SpotifySearchResultItem::Artist {
                 external_urls: _,
@@ -757,7 +877,6 @@ impl SpotifySearchResultItem {
                 artist_type: _,
                 uri: _,
             } => {
-
                 print!("****   Artist Name   : {}\n", name);
                 print!("****   Artist ID     : {}\n", id);
                 let genres = genres.join("\n                     : ");
@@ -766,10 +885,9 @@ impl SpotifySearchResultItem {
                     let url = images.get(0)?.get("url")?.as_str()?;
                     util::show_image(&util::donwload_image(url).await?);
                     Some(println!("\n\n"))
-                }else {
+                } else {
                     Some(())
                 }
-                
             }
             SpotifySearchResultItem::Album {
                 album_type,
@@ -787,17 +905,20 @@ impl SpotifySearchResultItem {
                 uri: _,
             } => {
                 print!("****   Album Name    : {}\n", name);
-                print!("****   Album ID      : {}\n", id  );
+                print!("****   Album ID      : {}\n", id);
                 let mut couples = artists
                     .iter()
                     .map(|artist| (artist.name.clone(), artist.id.clone()))
                     .collect::<Vec<_>>();
                 let couple_total = couples.len();
                 let (name, id) = couples.remove(0);
-                print!("****   Artist{}       {}: {}  := ID : {}\n",
-                if couple_total > 1 { "s" } else { "" },
-                if couple_total > 1 { "" } else { " "}
-                , name, id);
+                print!(
+                    "****   Artist{}       {}: {}  := ID : {}\n",
+                    if couple_total > 1 { "s" } else { "" },
+                    if couple_total > 1 { "" } else { " " },
+                    name,
+                    id
+                );
                 print!("****   Release Date  : {}\n", release_date);
                 print!("****   Total Tracks  : {}\n", total_tracks);
                 print!("****   Album Type    : {}\n", album_type);
@@ -805,10 +926,10 @@ impl SpotifySearchResultItem {
                     let url = images.get(0)?.get("url")?.as_str()?;
                     util::show_image(&util::donwload_image(url).await?);
                     Some(println!("\n\n"))
-                }else {
+                } else {
                     Some(())
                 }
-            },
+            }
         }
     }
 }
@@ -926,7 +1047,7 @@ impl SpotifySearchResult {
         s
     }
 
-    pub (crate) async  fn show_spotify_search_result(&self, graphic : bool) {
+    pub(crate) async fn show_spotify_search_result(&self, graphic: bool) {
         let mut section_track = true;
         let mut section_artist = true;
         let mut section_album = true;
@@ -950,7 +1071,7 @@ impl SpotifySearchResult {
                         section_album = true;
                         items_count = self.offset
                     }
-                },
+                }
                 crate::spotify::SpotifySearchResultItem::Artist { .. } => {
                     if section_artist {
                         print!("----------------------------------------\n");
@@ -962,7 +1083,7 @@ impl SpotifySearchResult {
                         print!("\n");
                         print!("------ Number of items :  {}   -------\n", self.total);
                         print!("------ result limit    :  {}   -------\n", self.limit);
-                        print!("------ result offset   :  {}   -------\n", self.offset );
+                        print!("------ result offset   :  {}   -------\n", self.offset);
                         print!("\n");
                         section_track = true;
                         section_artist = false;
@@ -981,7 +1102,7 @@ impl SpotifySearchResult {
                         print!("\n");
                         print!("------ Number of items :  {}   -------\n", self.total);
                         print!("------ result limit    :  {}   -------\n", self.limit);
-                        print!("------ result offset   :  {}   -------\n", self.offset );
+                        print!("------ result offset   :  {}   -------\n", self.offset);
                         print!("\n");
                         section_track = true;
                         section_artist = true;
@@ -989,7 +1110,6 @@ impl SpotifySearchResult {
                         items_count = self.offset
                     }
                 }
-                ,
             }
             items_count += 1;
             print!("****   {}\n", items_count);

@@ -167,6 +167,9 @@ pub enum CueSheetSubcommand {
         /// Album spotify Id 
         #[clap(long, alias = "id")]
         album_id: Option<String>,
+        /// Output file
+        #[clap(short, long, help = "Output file [stdout if not present]")]
+        output: Option<String>
     },
 
     /// Create the cue sheet by giving the requiered information throught the command line
@@ -695,9 +698,19 @@ pub async fn run_edit(
 
 pub async fn run_cuesheet(cs_subcommand:  CueSheetSubcommand) {
     match cs_subcommand {
-        CueSheetSubcommand::Fetch { artist, album, album_id } => {
-
+        CueSheetSubcommand::Fetch { artist, album, album_id, output } => {
+            run_cuesheet_fetch(artist, album, album_id, output).await
         },
         CueSheetSubcommand::Make {  } => todo!(),
+    }
+}
+
+pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>) {
+    let spotify = Spotify::init().await;
+    if let Some(album_id) = album_id {
+
+    } else {
+        let artist = artist.unwrap();
+        let album = album.unwrap();
     }
 }
