@@ -20,7 +20,7 @@ fn min_sec_mil_of_millies(milliemes: u64) -> (u32, u32, u32) {
     let milliemes = milliemes % 1000;
     let minutes = secondes / 60;
     let secondes = secondes % 60;
-    (minutes as u32, minutes as u32, milliemes as u32)
+    (minutes as u32, secondes as u32, milliemes as u32)
 }
 
 pub(crate) async fn donwload_image(url : &str) -> Option<DynamicImage> {
