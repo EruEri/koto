@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
+#[clap(author, version = "0.3.5", about, long_about = None)]
 pub struct Main {
     #[clap(subcommand)]
     pub subcommand: Option<Subcommands>,
