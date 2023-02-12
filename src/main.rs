@@ -1,7 +1,7 @@
 use std::{ffi::CStr, os::raw::c_char, path::PathBuf, process::exit};
 
 use clap::StructOpt;
-use command::{run_init, run_list, run_search, Main, run_edit, run_cuesheet};
+use command::{run_init, run_list, run_search, Main, run_edit, run_cuesheet, run_create_m3u};
 
 
 mod command;
@@ -93,7 +93,15 @@ async fn main() {
                 cs_subcommand
             } => {
                 let _ = run_cuesheet(cs_subcommand).await;
+            },
+            command::Subcommands::CreateM3U { 
+                include_extension, 
+                exclude_extention, 
+                output, directories 
+            } => {
+                let _ = run_create_m3u(include_extension, exclude_extention, output, directories);
             }
+
         },
     }
 }
