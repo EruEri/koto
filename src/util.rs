@@ -135,7 +135,9 @@ pub async fn cuesheet_from_album_id(mut filename: String, format: cue_file_forma
     if let Some(image_path) = image {
         if let Some(map) = album.images.get(0) {
             if let Some(url) = map.get("url").and_then( |url| url.as_str()) {
-                donwload_image(url).await.iter().for_each(|dyn_image| {dyn_image.save(image_path.as_str());});
+                donwload_image(url).await.iter().for_each(|dyn_image| {
+                    let _ = dyn_image.save(image_path.as_str());}
+                );
             }
         }
     }

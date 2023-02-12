@@ -3,6 +3,8 @@ use std::ffi::CStr;
 
 use clap::ArgEnum;
 
+
+#[allow(non_camel_case_types)]
 type value = std::os::raw::c_long;
 
 
