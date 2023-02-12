@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Parser)]
-#[clap(author, version = "0.3.5", about, long_about = None)]
+#[clap(author, version = "0.3.6", about, long_about = None)]
 pub struct Main {
     #[clap(subcommand)]
     pub subcommand: Option<Subcommands>,
@@ -145,13 +145,19 @@ pub enum Subcommands {
         cs_subcommand: CueSheetSubcommand,
     },
 
+    /// Create M3U playlist
     CreateM3U {
+
+        /// Include files
+        /// By default, matched files are [mp3, aiff, flac, wav, alac, ogg]
         #[clap(short, long)]
         include_extension: Vec<String>,
 
+        /// Exclude files from being matched
         #[clap(short, long)]
         exclude_extention: Vec<String>,
 
+        /// By default: Print to the standard output
         #[clap(short, long)]
         output: Option<String>,
         // #[clap(long)]
