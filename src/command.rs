@@ -17,13 +17,14 @@ use clap::{Parser, Subcommand};
 use crate::{
     app_dir_pathbuf,
     bindings::libcuesheetmaker::cue_file_format,
+    config::KOTO_VERSION,
     spotify::{Spotify, SpotifyIncludeGroupe, SpotifySearchType},
     sql::ArtistDB,
     util,
 };
 
 #[derive(Parser)]
-#[clap(author, version = super::KOTO_VERSION, about, long_about = None)]
+#[clap(author, version = KOTO_VERSION, about, long_about = None)]
 pub struct Main {
     #[clap(subcommand)]
     pub subcommand: Option<Subcommands>,

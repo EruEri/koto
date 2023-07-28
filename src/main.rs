@@ -3,11 +3,10 @@ use std::{ffi::CStr, os::raw::c_char, path::PathBuf, process::exit};
 use clap::StructOpt;
 use command::{run_create_m3u, run_cuesheet, run_edit, run_init, run_list, run_search, Main};
 
-pub const KOTO_VERSION: &'static str = env!("CARGO_PKG_VERSION");
-
 mod bindings;
 mod command;
 pub mod commands;
+pub mod config;
 mod spotify;
 mod sql;
 mod util;

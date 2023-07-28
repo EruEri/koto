@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 
+use crate::config::KOTO_VERSION;
+
 pub mod create_m3u;
 pub mod cuesheet;
 pub mod edit;
@@ -8,7 +10,7 @@ pub mod list;
 pub mod search;
 
 #[derive(Parser)]
-#[clap(author, version = super::KOTO_VERSION, about, long_about = None)]
+#[clap(author, version = KOTO_VERSION, about, long_about = None)]
 pub struct Koto {
     #[clap(subcommand)]
     pub subcommand: KotoSubcommands,
@@ -20,6 +22,7 @@ pub enum KotoSubcommands {
     #[clap(subcommand)]
     CueSheet(cuesheet::CueSheetSubcommand),
     Edit(edit::Edit),
+    Init(init::Init),
 }
 
 impl KotoSubcommands {
@@ -28,6 +31,7 @@ impl KotoSubcommands {
             KotoSubcommands::CreateM3U(m3u) => m3u.run(),
             KotoSubcommands::CueSheet(cue) => cue.run().await,
             KotoSubcommands::Edit(edit) => edit.run(),
+            KotoSubcommands::Init(init) => init.run(),
         }
     }
 }

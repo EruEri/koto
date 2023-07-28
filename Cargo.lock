@@ -727,6 +727,7 @@ dependencies = [
  "tag_edit",
  "tokio",
  "viuer",
+ "xdg",
 ]
 
 [[package]]
@@ -1768,3 +1769,9 @@ checksum = "0120db82e8a1e0b9fb3345a539c478767c0048d842860994d96113d5b667bd69"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "xdg"
+version = "2.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213b7324336b53d2414b2db8537e56544d981803139155afa84f76eeebb7a546"
