@@ -256,15 +256,14 @@ impl Spotify {
 
     pub async fn album(&self, album_id: String) -> Option<Album> {
         let rb = self.setup_url_request(
-            &SpotifyRessourceType::Album, vec![album_id], 
-            None, None, None, vec![]);
-            rb.
-            send()
-            .await
-            .ok()?
-            .json()
-            .await
-            .ok()
+            &SpotifyRessourceType::Album,
+            vec![album_id],
+            None,
+            None,
+            None,
+            vec![],
+        );
+        rb.send().await.ok()?.json().await.ok()
     }
 
     pub async fn _artists(&self, artist_ids: Vec<String>) -> Option<Vec<Value>> {
@@ -291,13 +290,7 @@ impl Spotify {
             None,
             vec![],
         );
-        rb
-        .send()
-        .await
-        .ok()?
-        .json()
-        .await
-        .ok()
+        rb.send().await.ok()?.json().await.ok()
     }
     pub async fn artist_album(
         &self,
@@ -454,26 +447,26 @@ impl Display for SpotifySearchType {
 pub struct Copyrights {
     text: String,
     #[serde(rename = "type")]
-    c_type: String
+    c_type: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Album {
     pub(crate) album_type: String,
     pub(crate) artists: Vec<SpotifySearchAlbumArtist>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) available_markets: Option<Option<Vec<String>>>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) copyrights: Option<Option<Vec<Copyrights>>>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) external_ids: Option<Option<HashMap<String, String>>>,
     pub(crate) external_urls: HashMap<String, String>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) genres: Option<Option<Vec<String>>>,
     pub(crate) href: String,
     pub(crate) id: String,
     pub(crate) images: Vec<HashMap<String, Value>>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) label: Option<Option<String>>,
     pub(crate) name: String,
     pub(crate) popularity: Option<Option<i32>>,
@@ -481,7 +474,7 @@ pub struct Album {
     pub(crate) release_date_precision: String,
     pub(crate) total_tracks: u32,
     pub(crate) tracks: SpotifyAlbumTrackResult,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) restrictions: Option<Option<HashMap<String, Value>>>,
     #[serde(rename = "type")]
     pub(crate) a_type: String,
@@ -624,7 +617,7 @@ pub struct TrackAlbum {
     pub(crate) track_number: u16,
     #[serde(rename = "type")]
     pub(crate) _type: String,
-    pub(crate) uri: String
+    pub(crate) uri: String,
 }
 
 #[derive(Debug, Deserialize)]

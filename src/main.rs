@@ -1,16 +1,16 @@
 use std::{ffi::CStr, os::raw::c_char, path::PathBuf, process::exit};
 
 use clap::StructOpt;
-use command::{run_init, run_list, run_search, Main, run_edit, run_cuesheet, run_create_m3u};
+use command::{run_create_m3u, run_cuesheet, run_edit, run_init, run_list, run_search, Main};
 
 pub const KOTO_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
+mod bindings;
 mod command;
 pub mod commands;
 mod spotify;
-mod util;
 mod sql;
-mod bindings;
+mod util;
 
 #[tokio::main]
 async fn main() {
@@ -64,7 +64,18 @@ async fn main() {
                 offset,
                 item,
             } => {
-                let _ = run_search(search_subcommand, artist, album, track, market, limit, graphic, offset, item.unwrap_or("".into())).await;
+                let _ = run_search(
+                    search_subcommand,
+                    artist,
+                    album,
+                    track,
+                    market,
+                    limit,
+                    graphic,
+                    offset,
+                    item.unwrap_or("".into()),
+                )
+                .await;
             }
             command::Subcommands::Init {
                 client_id,
@@ -89,21 +100,32 @@ async fn main() {
                 output,
                 file,
             } => {
-                let _ = run_edit(file_type, title, artist, album, artist_album, year, bpm, track_position, images, output, file).await;
-            },
-            command::Subcommands::CueSheet { 
-                cs_subcommand
-            } => {
+                let _ = run_edit(
+                    file_type,
+                    title,
+                    artist,
+                    album,
+                    artist_album,
+                    year,
+                    bpm,
+                    track_position,
+                    images,
+                    output,
+                    file,
+                )
+                .await;
+            }
+            command::Subcommands::CueSheet { cs_subcommand } => {
                 let _ = run_cuesheet(cs_subcommand).await;
-            },
-            command::Subcommands::CreateM3U { 
-                include_extension, 
-                exclude_extention, 
-                output, directories 
+            }
+            command::Subcommands::CreateM3U {
+                include_extension,
+                exclude_extention,
+                output,
+                directories,
             } => {
                 let _ = run_create_m3u(include_extension, exclude_extention, output, directories);
             }
-
         },
     }
 }

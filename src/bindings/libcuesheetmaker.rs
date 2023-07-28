@@ -3,10 +3,8 @@ use std::ffi::CStr;
 
 use clap::ArgEnum;
 
-
 #[allow(non_camel_case_types)]
 type value = std::os::raw::c_long;
-
 
 extern "C" {
     pub fn caml_wrapper_starup_argv(argv: *mut *mut ::std::os::raw::c_char);
@@ -33,7 +31,6 @@ extern "C" {
     ) -> duration;
 }
 
-
 extern "C" {
     pub fn string_of_duration(duration: duration) -> *const ::std::os::raw::c_char;
 }
@@ -56,7 +53,11 @@ extern "C" {
     ) -> *mut cue_track;
 }
 extern "C" {
-    pub fn cuetrack_add_index(track: *mut cue_track, time_index: ::std::os::raw::c_int, duration: duration) -> *mut cue_track;
+    pub fn cuetrack_add_index(
+        track: *mut cue_track,
+        time_index: ::std::os::raw::c_int,
+        duration: duration,
+    ) -> *mut cue_track;
 }
 extern "C" {
     pub fn cuetrack_add_arranger(
@@ -239,39 +240,31 @@ extern "C" {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct duration {
-    value: value
+    value: value,
 }
 
 impl duration {
     pub fn zero_frame() -> Self {
-        unsafe {
-            drt_zero_frame()
-        }
+        unsafe { drt_zero_frame() }
     }
 
     pub fn minutes_seconde_format(minutes: i32, secondes: i32) -> Self {
-        unsafe {
-            drt_minuts_seconde_format(minutes, secondes)
-        }
+        unsafe { drt_minuts_seconde_format(minutes, secondes) }
     }
 
     pub fn minuts_seconde_milliemes_format(minutes: i32, secondes: i32, milliemes: i32) -> Self {
-        unsafe {
-            drt_minuts_seconde_milliemes_format(minutes, secondes, milliemes)
-        }
+        unsafe { drt_minuts_seconde_milliemes_format(minutes, secondes, milliemes) }
     }
 
-    pub fn minuts_seconde_frames_format(minutes: i32, secondes: i32, frames : i32) -> Self {
-        unsafe {
-            drt_minuts_seconde_frames_format(minutes, secondes, frames)
-        }
+    pub fn minuts_seconde_frames_format(minutes: i32, secondes: i32, frames: i32) -> Self {
+        unsafe { drt_minuts_seconde_frames_format(minutes, secondes, frames) }
     }
 }
 
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct cue_track {
-    track: value
+    track: value,
 }
 
 impl cue_track {
@@ -280,15 +273,11 @@ impl cue_track {
     }
 
     pub fn add_pregap(&mut self, duration: duration) -> &mut cue_track {
-        unsafe {
-            &mut *(cuetrack_add_pregap(self as *mut Self, duration))
-        }
+        unsafe { &mut *(cuetrack_add_pregap(self as *mut Self, duration)) }
     }
 
     pub fn add_postgap(&mut self, duration: duration) -> &mut cue_track {
-        unsafe {
-            &mut *(cuetrack_add_postgap(self as *mut Self, duration))
-        }
+        unsafe { &mut *(cuetrack_add_postgap(self as *mut Self, duration)) }
     }
 
     pub fn add_iscr(&mut self, iscr: &str) -> &mut Self {
@@ -299,9 +288,7 @@ impl cue_track {
     }
 
     pub fn add_index(&mut self, time_index: i32, duration: duration) -> &mut Self {
-        unsafe {
-            &mut *(cuetrack_add_index(self as *mut Self, time_index, duration))
-        }
+        unsafe { &mut *(cuetrack_add_index(self as *mut Self, time_index, duration)) }
     }
 
     pub fn add_arranger(&mut self, arranger: &str) -> &mut Self {
@@ -326,15 +313,11 @@ impl cue_track {
     }
 
     pub fn add_genre(&mut self, genre: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuetrack_add_genre(self as *mut Self, genre.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuetrack_add_genre(self as *mut Self, genre.as_ptr() as *const i8)) }
     }
 
     pub fn add_message(&mut self, message: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuetrack_add_message(self as *mut Self, message.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuetrack_add_message(self as *mut Self, message.as_ptr() as *const i8)) }
     }
 
     pub fn add_performer(&mut self, performer: &str) -> &mut Self {
@@ -350,15 +333,11 @@ impl cue_track {
     }
 
     pub fn add_title(&mut self, title: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuetrack_add_title(self as *mut Self, title.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuetrack_add_title(self as *mut Self, title.as_ptr() as *const i8)) }
     }
 
     pub fn add_toc_info(&mut self, toc_info: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuetrack_add_toc_info(self as *mut Self, toc_info.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuetrack_add_toc_info(self as *mut Self, toc_info.as_ptr() as *const i8)) }
     }
 
     pub fn add_toc_info2(&mut self, toc_info2: &str) -> &mut Self {
@@ -375,7 +354,11 @@ impl cue_track {
 
     pub fn add_rem(&mut self, key: &str, val: &str) -> &mut Self {
         unsafe {
-            &mut *(cuetrack_add_rem(self as *mut Self, key.as_ptr() as *const i8, val.as_ptr() as *const i8))
+            &mut *(cuetrack_add_rem(
+                self as *mut Self,
+                key.as_ptr() as *const i8,
+                val.as_ptr() as *const i8,
+            ))
         }
     }
 }
@@ -383,15 +366,12 @@ impl cue_track {
 #[allow(non_camel_case_types)]
 #[repr(C)]
 pub struct cue_sheet {
-    sheet: value
+    sheet: value,
 }
 
 impl cue_sheet {
-
     pub fn new_empty_sheet(file_name: &str, format: cue_file_format) -> Self {
-        unsafe {
-            create_empty_sheet(file_name.as_ptr() as *const i8, format)
-        }
+        unsafe { create_empty_sheet(file_name.as_ptr() as *const i8, format) }
     }
 
     pub fn to_format(&mut self, sum: bool) -> Option<String> {
@@ -404,7 +384,7 @@ impl cue_sheet {
 
     pub fn export(&mut self, output: &str) -> Option<()> {
         unsafe {
-            let status = cue_sheet_export(self as *mut Self, output.as_ptr() as *const i8 );
+            let status = cue_sheet_export(self as *mut Self, output.as_ptr() as *const i8);
             if status == 0 {
                 Some(())
             } else {
@@ -449,15 +429,11 @@ impl cue_sheet {
     }
 
     pub fn add_genre(&mut self, genre: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuesheet_add_genre(self as *mut Self, genre.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuesheet_add_genre(self as *mut Self, genre.as_ptr() as *const i8)) }
     }
 
     pub fn add_message(&mut self, message: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuesheet_add_message(self as *mut Self, message.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuesheet_add_message(self as *mut Self, message.as_ptr() as *const i8)) }
     }
 
     pub fn add_performer(&mut self, performer: &str) -> &mut Self {
@@ -473,15 +449,11 @@ impl cue_sheet {
     }
 
     pub fn add_title(&mut self, title: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuesheet_add_title(self as *mut Self, title.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuesheet_add_title(self as *mut Self, title.as_ptr() as *const i8)) }
     }
 
     pub fn add_toc_info(&mut self, toc_info: &str) -> &mut Self {
-        unsafe {
-            &mut *(cuesheet_add_toc_info(self as *mut Self, toc_info.as_ptr() as *const i8))
-        }
+        unsafe { &mut *(cuesheet_add_toc_info(self as *mut Self, toc_info.as_ptr() as *const i8)) }
     }
 
     pub fn add_toc_info2(&mut self, toc_info2: &str) -> &mut Self {
@@ -498,17 +470,18 @@ impl cue_sheet {
 
     pub fn add_rem(&mut self, key: &str, val: &str) -> &mut Self {
         unsafe {
-            &mut *(cuesheet_add_rem(self as *mut Self, key.as_ptr() as *const i8, val.as_ptr() as *const i8))
+            &mut *(cuesheet_add_rem(
+                self as *mut Self,
+                key.as_ptr() as *const i8,
+                val.as_ptr() as *const i8,
+            ))
         }
     }
 
     pub fn add_track(&mut self, track: &cue_track) -> &mut Self {
-        unsafe {
-            &mut *(cuesheet_add_track(self as *mut Self, track as *const cue_track) )
-        }
+        unsafe { &mut *(cuesheet_add_track(self as *mut Self, track as *const cue_track)) }
     }
 }
-
 
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug, ArgEnum)]
@@ -518,7 +491,7 @@ pub enum cue_file_format {
     MOTOROLA,
     AIFF,
     WAVE,
-    MP3
+    MP3,
 }
 
 #[allow(non_camel_case_types)]
@@ -527,7 +500,7 @@ pub enum cue_track_flag {
     PRE = 0,
     DCP,
     _4CH,
-    SCMS
+    SCMS,
 }
 
 #[allow(non_camel_case_types)]

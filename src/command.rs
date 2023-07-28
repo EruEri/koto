@@ -1,15 +1,25 @@
 use clap::{ArgEnum, ArgGroup};
 use rusqlite::params;
-use std::{fs::{OpenOptions, read_dir}, io::Write, path::{PathBuf, Path}, process::exit, str::FromStr, time::Duration, collections::HashSet, fmt::Display};
+use std::{
+    collections::HashSet,
+    fmt::Display,
+    fs::{read_dir, OpenOptions},
+    io::Write,
+    path::{Path, PathBuf},
+    process::exit,
+    str::FromStr,
+    time::Duration,
+};
 use tag_edit::{FlacTag, PictureFormat, ID3TAG};
 
 use clap::{Parser, Subcommand};
 
 use crate::{
     app_dir_pathbuf,
+    bindings::libcuesheetmaker::cue_file_format,
     spotify::{Spotify, SpotifyIncludeGroupe, SpotifySearchType},
     sql::ArtistDB,
-    util, bindings::libcuesheetmaker::cue_file_format,
+    util,
 };
 
 #[derive(Parser)]
@@ -147,7 +157,6 @@ pub enum Subcommands {
 
     /// Create M3U playlist
     CreateM3U {
-
         /// Include files
         /// By default, matched files are [mp3, aiff, flac, wav, alac, ogg]
         #[clap(short, long)]
@@ -165,9 +174,8 @@ pub enum Subcommands {
 
         // #[clap(long)]
         // stop_on_error: bool,
-
-        directories: Vec<String>
-    }
+        directories: Vec<String>,
+    },
 }
 #[derive(Subcommand)]
 pub enum CueSheetSubcommand {
@@ -188,7 +196,7 @@ pub enum CueSheetSubcommand {
         /// Album name
         #[clap(long, alias = "al")]
         album: Option<String>,
-        /// Album spotify Id 
+        /// Album spotify Id
         #[clap(long, alias = "id")]
         album_id: Option<String>,
         /// Output file
@@ -205,7 +213,7 @@ pub enum CueSheetSubcommand {
         total_duration: bool,
         /// output path where fetched album illustration will be created
         #[clap(short, long)]
-        image: Option<String>
+        image: Option<String>,
     },
 
     /// Create the cue sheet by giving the requiered information throught the command line
@@ -732,16 +740,44 @@ pub async fn run_edit(
 
 // ------------------------  CueSheet  ------------------------ \\
 
-pub async fn run_cuesheet(cs_subcommand:  CueSheetSubcommand) {
+pub async fn run_cuesheet(cs_subcommand: CueSheetSubcommand) {
     match cs_subcommand {
-        CueSheetSubcommand::Fetch { artist, album, album_id, output, cue_file_name, format, total_duration, image } => {
-            run_cuesheet_fetch(artist, album, album_id, output, cue_file_name, format, total_duration, image).await
-        },
-        CueSheetSubcommand::Make {  } => todo!(),
+        CueSheetSubcommand::Fetch {
+            artist,
+            album,
+            album_id,
+            output,
+            cue_file_name,
+            format,
+            total_duration,
+            image,
+        } => {
+            run_cuesheet_fetch(
+                artist,
+                album,
+                album_id,
+                output,
+                cue_file_name,
+                format,
+                total_duration,
+                image,
+            )
+            .await
+        }
+        CueSheetSubcommand::Make {} => todo!(),
     }
 }
 
-pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, album_id: Option<String>, output: Option<String>, cue_file_name: String, format: cue_file_format, total_duration: bool, image: Option<String>) {
+pub async fn run_cuesheet_fetch(
+    artist: Option<String>,
+    album: Option<String>,
+    album_id: Option<String>,
+    output: Option<String>,
+    cue_file_name: String,
+    format: cue_file_format,
+    total_duration: bool,
+    image: Option<String>,
+) {
     let spotify = Spotify::init().await;
 
     let album_id = if let Some(id) = album_id {
@@ -749,31 +785,66 @@ pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, a
     } else {
         let artist = artist.unwrap();
         let album = album.unwrap();
-        match spotify.search(format!("{} {}", album, artist).as_str(), vec![SpotifySearchType::Album], None, Some(1), None, None).await {
+        match spotify
+            .search(
+                format!("{} {}", album, artist).as_str(),
+                vec![SpotifySearchType::Album],
+                None,
+                Some(1),
+                None,
+                None,
+            )
+            .await
+        {
             None => {
                 println!("No Resultat");
                 exit(1)
-            },
+            }
             Some(result) => {
-                let data = result.get(&crate::spotify::SpotifySearchKey::Albums).unwrap_or_else(|| {println!("Unable to fetch the artist"); exit(1)});
-                data.items.iter().filter_map(|ssri| {
-                    match ssri {
-                        crate::spotify::SpotifySearchResultItem::Album { album_type: _, artists: _, 
-                            external_urls: _, available_markets: _, 
-                            href: _, id, images: _, name: _, 
-                            release_date: _, release_date_precision: _, total_tracks: _, a_type: _, uri: _ } => { Some(id.clone()) },
-                            _ => None
-                    }
-                    
+                let data = result
+                    .get(&crate::spotify::SpotifySearchKey::Albums)
+                    .unwrap_or_else(|| {
+                        println!("Unable to fetch the artist");
+                        exit(1)
+                    });
+                data.items.iter().filter_map(|ssri| match ssri {
+                    crate::spotify::SpotifySearchResultItem::Album {
+                        album_type: _,
+                        artists: _,
+                        external_urls: _,
+                        available_markets: _,
+                        href: _,
+                        id,
+                        images: _,
+                        name: _,
+                        release_date: _,
+                        release_date_precision: _,
+                        total_tracks: _,
+                        a_type: _,
+                        uri: _,
+                    } => Some(id.clone()),
+                    _ => None,
                 })
             }
             .collect::<Vec<String>>()
             .first()
-            .unwrap_or_else(|| { println!("Unable to get the artist Id"); exit(1)})
-            .clone()
+            .unwrap_or_else(|| {
+                println!("Unable to get the artist Id");
+                exit(1)
+            })
+            .clone(),
         }
     };
-    if let Err(e) = util::cuesheet_from_album_id(cue_file_name, format, output, album_id.as_str(), total_duration, image).await {
+    if let Err(e) = util::cuesheet_from_album_id(
+        cue_file_name,
+        format,
+        output,
+        album_id.as_str(),
+        total_duration,
+        image,
+    )
+    .await
+    {
         println!("{}", e);
         exit(1)
     }
@@ -781,21 +852,14 @@ pub async fn run_cuesheet_fetch(artist: Option<String>, album: Option<String>, a
 
 // ------------------------  CreateM3U  ------------------------ \\
 
-const DEFAULT_AUDIO_FILE_EXTENSION: &[&'static str] =  &[
-    "mp3",
-    "aiff",
-    "flac",
-    "wav",
-    "alac",
-    "ogg"
-];
+const DEFAULT_AUDIO_FILE_EXTENSION: &[&'static str] =
+    &["mp3", "aiff", "flac", "wav", "alac", "ogg"];
 
 struct M3UPlaylist {
-    items: Vec<String>
+    items: Vec<String>,
 }
 
 impl Display for M3UPlaylist {
-
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let _ = write!(f, "#EXTM3U\n\n");
         let _ = self.items.iter().for_each(|path| {
@@ -810,21 +874,43 @@ impl M3UPlaylist {
         Self { items: vec![] }
     }
 
-    fn _append_path<T : AsRef<Path>>(&mut self, path: T ) {
-        self.items.push(path.as_ref().canonicalize().unwrap().to_str().unwrap().to_string())
+    fn _append_path<T: AsRef<Path>>(&mut self, path: T) {
+        self.items.push(
+            path.as_ref()
+                .canonicalize()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        )
     }
 
     fn extract_audio_files(&mut self, extensions: &HashSet<String>, path: &PathBuf) {
         let files_in_dir = read_dir(path).unwrap();
-        files_in_dir.for_each( |entry| {
+        files_in_dir.for_each(|entry| {
             let entry = entry.unwrap();
             let metadata = entry.metadata().unwrap();
-            if metadata.is_file() && entry.path().extension().map(|osstr| { extensions.contains( &osstr.to_str().unwrap().to_lowercase() )} ).unwrap_or(false) {
-                self.items.push(entry.path().canonicalize().unwrap().to_str().unwrap().to_string())
+            if metadata.is_file()
+                && entry
+                    .path()
+                    .extension()
+                    .map(|osstr| extensions.contains(&osstr.to_str().unwrap().to_lowercase()))
+                    .unwrap_or(false)
+            {
+                self.items.push(
+                    entry
+                        .path()
+                        .canonicalize()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                )
             } else if metadata.is_dir() {
-               self.extract_audio_files(extensions, &entry.path())
-            } else {}
-        } )
+                self.extract_audio_files(extensions, &entry.path())
+            } else {
+            }
+        })
     }
 
     fn append_sub_dir(&mut self, extensions: &HashSet<String>, path: &PathBuf) {
@@ -833,19 +919,23 @@ impl M3UPlaylist {
     }
 }
 
-
-pub fn run_create_m3u(include_extension: Vec<String>, exclude_extension: Vec<String>, output: Option<String>, directories: Vec<String>) {
+pub fn run_create_m3u(
+    include_extension: Vec<String>,
+    exclude_extension: Vec<String>,
+    output: Option<String>,
+    directories: Vec<String>,
+) {
     let mut extensions = HashSet::new();
     let _ = DEFAULT_AUDIO_FILE_EXTENSION.iter().for_each(|extension| {
-        let _ = extensions.insert(extension.to_string().to_lowercase() );
-    } );
+        let _ = extensions.insert(extension.to_string().to_lowercase());
+    });
     let _ = include_extension.iter().for_each(|extension| {
         let _ = extensions.insert(extension.to_owned().to_lowercase());
     });
 
     let _ = exclude_extension.iter().for_each(|extension| {
-        let _ = extensions.remove( &extension.to_lowercase() );
-    } );
+        let _ = extensions.remove(&extension.to_lowercase());
+    });
 
     let mut m3u_playlist = M3UPlaylist::new();
     for raw_path in directories.iter() {
@@ -861,10 +951,12 @@ pub fn run_create_m3u(include_extension: Vec<String>, exclude_extension: Vec<Str
     match output {
         None => println!("{}", m3u_playlist),
         Some(output) => {
-            let mut file = 
-            OpenOptions::new().create(true).write(true).truncate(true).open(output).unwrap_or_else(|error| {
-                panic!("{}", error)
-            });
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(output)
+                .unwrap_or_else(|error| panic!("{}", error));
             let _ = file.write_all(m3u_playlist.to_string().as_bytes());
             ()
         }

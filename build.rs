@@ -1,25 +1,36 @@
 use std::process::Command;
 
-fn main(){
+fn main() {
     let out_dir = "external/product";
 
     let _ = Command::new("cc")
-    .args(vec!["-c", "external/date/date.c", "-o", format!("{}/date.o", out_dir).as_str()])
-    .status()
-    .expect("CC Date")
-    ;
+        .args(vec![
+            "-c",
+            "external/date/date.c",
+            "-o",
+            format!("{}/date.o", out_dir).as_str(),
+        ])
+        .status()
+        .expect("CC Date");
     let status = Command::new("cc")
-    .args(vec!["-c", "external/dir/dir.c", "-o", format!("{}/dir.o", out_dir).as_str()])
-    .status()
-    .expect("CC Directory")
-    ;
+        .args(vec![
+            "-c",
+            "external/dir/dir.c",
+            "-o",
+            format!("{}/dir.o", out_dir).as_str(),
+        ])
+        .status()
+        .expect("CC Directory");
     let _ = Command::new("make")
-    .args(vec!["-C", "external/libcuesheetmaker"])
-    .status()
-    .expect("Failed to make");
+        .args(vec!["-C", "external/libcuesheetmaker"])
+        .status()
+        .expect("Failed to make");
     println!("Status : {:?}", status);
     println!("cargo:rustc-link-search={}", out_dir);
-    println!("cargo:rustc-link-search=native={}", "external/libcuesheetmaker/product");
+    println!(
+        "cargo:rustc-link-search=native={}",
+        "external/libcuesheetmaker/product"
+    );
     println!("cargo:rustc-link-lib={}", "date.o");
     println!("cargo:rustc-link-lib={}", "dir.o");
     println!("cargo:rustc-link-lib={}", "cuesheetmaker");
