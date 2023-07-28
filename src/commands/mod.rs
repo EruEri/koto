@@ -19,4 +19,15 @@ pub enum KotoSubcommands {
     CreateM3U(create_m3u::CreateM3U),
     #[clap(subcommand)]
     CueSheet(cuesheet::CueSheetSubcommand),
+    Edit(edit::Edit),
+}
+
+impl KotoSubcommands {
+    pub async fn run(self) {
+        match self {
+            KotoSubcommands::CreateM3U(m3u) => m3u.run(),
+            KotoSubcommands::CueSheet(cue) => cue.run().await,
+            KotoSubcommands::Edit(edit) => edit.run(),
+        }
+    }
 }
