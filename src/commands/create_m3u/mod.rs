@@ -75,6 +75,7 @@ impl M3UPlaylist {
     }
 }
 
+/// Create M3U playlist
 #[derive(Parser)]
 pub struct CreateM3U {
     /// Include files

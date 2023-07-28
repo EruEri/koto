@@ -9,6 +9,7 @@ pub enum FileType {
     Flac,
 }
 
+/// Edit mp3 and flac file
 #[derive(Parser)]
 pub struct Edit {
     #[clap(long = "type", arg_enum)]

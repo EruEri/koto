@@ -23,6 +23,8 @@ pub enum KotoSubcommands {
     CueSheet(cuesheet::CueSheetSubcommand),
     Edit(edit::Edit),
     Init(init::Init),
+    Search(search::Search),
+    List(list::List),
 }
 
 impl KotoSubcommands {
@@ -32,6 +34,14 @@ impl KotoSubcommands {
             KotoSubcommands::CueSheet(cue) => cue.run().await,
             KotoSubcommands::Edit(edit) => edit.run(),
             KotoSubcommands::Init(init) => init.run(),
+            KotoSubcommands::Search(search) => search.run().await,
+            KotoSubcommands::List(list) => list.run(),
         }
+    }
+}
+
+impl Koto {
+    pub async fn run(self) {
+        self.subcommand.run().await
     }
 }

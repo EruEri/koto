@@ -1,6 +1,11 @@
+use std::process::exit;
+
 use clap::{Parser, Subcommand};
 
-use crate::spotify::{Spotify, SpotifySearchType};
+use crate::{
+    config::{koto_base_dir, KOTO_NAME},
+    spotify::{Spotify, SpotifySearchType},
+};
 
 pub mod album;
 pub mod artist;
@@ -62,7 +67,29 @@ impl SearchSubCommand {
 }
 
 impl Search {
+    fn check_credential_exist() {
+        if let None = std::env::var("CLIENT_ID").ok() {
+            println!("CLIENT_ID key not found\nYou should maybe run koto init");
+            exit(1)
+        }
+        if let None = std::env::var("CLIENT_SECRET").ok() {
+            println!("CLIENT_SECRET key not found\nYou should maybe run koto init");
+            exit(1)
+        }
+    }
     pub async fn run(self) {
+        let koto_dir = koto_base_dir();
+        let path = match koto_dir.find_config_file(".env") {
+            Some(path) => path,
+            None => {
+                println!("No env file, You should maybe run {} init", KOTO_NAME);
+                return;
+            }
+        };
+        let _ = dotenv::from_path(path);
+        let _ = dotenv::dotenv();
+        let () = Self::check_credential_exist();
+
         match self.search_subcommand {
             Some(sub) => sub.run().await,
             None => self.run_search().await,

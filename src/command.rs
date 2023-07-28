@@ -15,7 +15,6 @@ use tag_edit::{FlacTag, PictureFormat, ID3TAG};
 use clap::{Parser, Subcommand};
 
 use crate::{
-    app_dir_pathbuf,
     bindings::libcuesheetmaker::cue_file_format,
     config::KOTO_VERSION,
     spotify::{Spotify, SpotifyIncludeGroupe, SpotifySearchType},
