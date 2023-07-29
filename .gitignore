@@ -9,3 +9,4 @@ new_song_db.sqlite
 /external/libcuesheetmaker/tmp
 /external/libcuesheetmaker/*.cm*
 /external/libcuesheetmaker/*.o
+Cargo.lock

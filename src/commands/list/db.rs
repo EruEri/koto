@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, time::Duration};
 
-use time::OffsetDateTime;
+use chrono::NaiveDate;
 
 use crate::{
     config::koto_base_dir,
@@ -12,7 +12,7 @@ pub struct Artist {
     pub(crate) artist_name: String,
     pub(crate) artist_spotify_id: String,
     pub(crate) last_album: String,
-    pub(crate) last_album_release_date: OffsetDateTime,
+    pub(crate) last_album_release_date: NaiveDate,
     pub(crate) last_album_spotify_id: String,
     pub(crate) last_album_url: String,
 }

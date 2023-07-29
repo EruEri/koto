@@ -1,5 +1,6 @@
 use std::{cmp, fs::OpenOptions, io::Write};
 
+use chrono::Datelike;
 use image::DynamicImage;
 use viuer::Config;
 

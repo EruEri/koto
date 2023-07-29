@@ -1,9 +1,9 @@
 #![allow(unused)]
 
+use chrono::NaiveDate;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, process::exit};
-use time::OffsetDateTime;
 use viuer::resize;
 
 use base64::encode;
@@ -469,8 +469,7 @@ pub struct Album {
     pub(crate) label: Option<Option<String>>,
     pub(crate) name: String,
     pub(crate) popularity: Option<Option<i32>>,
-    #[serde(with = "time::serde::iso8601")]
-    pub(crate) release_date: OffsetDateTime,
+    pub(crate) release_date: NaiveDate,
     pub(crate) release_date_precision: String,
     pub(crate) total_tracks: u32,
     pub(crate) tracks: SpotifyAlbumTrackResult,
@@ -536,8 +535,7 @@ pub struct AlbumItems {
     pub(crate) id: String,
     pub(crate) images: Vec<HashMap<String, Value>>,
     pub(crate) name: String,
-    #[serde(with = "time::serde::iso8601")]
-    pub(crate) release_date: OffsetDateTime,
+    pub(crate) release_date: NaiveDate,
     pub(crate) release_date_precision: String,
     pub(crate) total_tracks: u8,
     #[serde(rename = "type")]
