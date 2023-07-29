@@ -3,7 +3,7 @@ use std::{fs::OpenOptions, time::Duration};
 use chrono::NaiveDate;
 
 use crate::{
-    config::koto_base_dir,
+    config::{koto_base_dir, KOTO_DB_NAME},
     spotify::{self, SpotifySearchResultItem, SpotifySearchType},
 };
 
@@ -178,7 +178,7 @@ impl Artists {
 
     pub fn save(&self) {
         let koto_dir = koto_base_dir();
-        let path = match koto_dir.find_data_file("db.json") {
+        let path = match koto_dir.find_data_file(KOTO_DB_NAME) {
             Some(some) => some,
             None => {
                 println!("Error file not exist");
@@ -198,7 +198,7 @@ impl Artists {
 
     pub fn deserialize() -> Option<Self> {
         let koto_dir = koto_base_dir();
-        let path = koto_dir.find_data_file("db.json")?;
+        let path = koto_dir.find_data_file(KOTO_DB_NAME)?;
         let file = OpenOptions::new()
             .create(false)
             .truncate(false)

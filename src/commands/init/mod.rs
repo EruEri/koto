@@ -4,7 +4,7 @@ use clap::Parser;
 
 use crate::{
     commands::list::db::Artists,
-    config::{koto_base_dir, KOTO_NAME},
+    config::{koto_base_dir, KOTO_NAME, KOTO_ENV, KOTO_DB_NAME},
 };
 
 #[derive(Parser)]
@@ -54,7 +54,7 @@ impl Init {
         //     }
         // };
 
-        let db_path = match koto_dir.place_data_file("db.json") {
+        let db_path = match koto_dir.place_data_file(KOTO_DB_NAME) {
             Ok(db_path) => db_path,
             Err(e) => {
                 println!("Error {}", e);
@@ -81,7 +81,7 @@ impl Init {
                 return;
             }
         };
-        let env = match koto_dir.place_config_file(".env") {
+        let env = match koto_dir.place_config_file(KOTO_ENV) {
             Ok(path) => path,
             Err(e) => {
                 println!("Error {}", e);

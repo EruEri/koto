@@ -2,6 +2,8 @@ use xdg::BaseDirectories;
 
 pub const KOTO_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 pub const KOTO_NAME: &'static str = env!("CARGO_PKG_NAME");
+pub const KOTO_DB_NAME: &'static str = "db.json";
+pub const KOTO_ENV: &'static str = ".env";
 
 pub fn koto_base_dir() -> BaseDirectories {
     xdg::BaseDirectories::with_prefix(KOTO_NAME)
@@ -10,7 +12,7 @@ pub fn koto_base_dir() -> BaseDirectories {
 
 pub fn extend_env() {
     let koto_dir = koto_base_dir();
-    let path = match koto_dir.find_config_file(".env") {
+    let path = match koto_dir.find_config_file(KOTO_ENV) {
         Some(path) => path,
         None => {
             println!("No env file, You should maybe run {} init", KOTO_NAME);
