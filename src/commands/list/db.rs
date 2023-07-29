@@ -164,8 +164,8 @@ impl Artists {
 
     pub fn delete(&mut self, id: bool, name: &String) {
         self.artists.retain(|elt| match id {
-            true => name == &elt.artist_spotify_id,
-            false => name == &elt.artist_name,
+            true => name != &elt.artist_spotify_id,
+            false => name != &elt.artist_name,
         })
     }
 

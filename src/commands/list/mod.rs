@@ -2,7 +2,10 @@ pub mod db;
 
 use clap::{ArgGroup, Parser};
 
-use crate::{spotify::Spotify, config::{extend_env, check_credential_exist}};
+use crate::{
+    config::{check_credential_exist, extend_env},
+    spotify::Spotify,
+};
 
 use self::db::{Artist, Artists};
 
@@ -39,7 +42,7 @@ impl List {
         let () = extend_env();
         let () = match check_credential_exist() {
             true => (),
-            false => return 
+            false => return,
         };
         match (&self.add, &self.delete) {
             (Some(_), Some(_)) => unreachable!("Are mutual excluded"),
@@ -77,8 +80,8 @@ impl List {
             Some(a) => a,
             None => {
                 println!("Artist not found");
-                return ;
-            },
+                return;
+            }
         };
         db.add(artist);
         db.save();

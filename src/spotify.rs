@@ -815,21 +815,9 @@ impl SpotifySearchResultItem {
             SpotifySearchResultItem::Track {
                 album,
                 artists,
-                available_markets: _,
-                disc_number: _,
-                duration_ms: _,
-                explicit: _,
-                external_ids: _,
-                external_urls: _,
-                href: _,
                 id,
-                is_local: _,
                 name,
-                popularity: _,
-                preview_url: _,
-                track_number: _,
-                t_type: _,
-                uri: _,
+                ..
             } => {
                 print!("****   Song Name   : {}\n", name);
                 print!("****   Song ID     : {}\n", id);

@@ -1,12 +1,11 @@
 use clap::StructOpt;
 use commands::Koto;
 
-mod bindings;
-mod command;
+
 pub mod commands;
 pub mod config;
+mod bindings;
 mod spotify;
-mod sql;
 mod util;
 
 #[tokio::main]

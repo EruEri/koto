@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 use crate::{
-    config::{extend_env, check_credential_exist},
+    config::{check_credential_exist, extend_env},
     spotify::{Spotify, SpotifySearchType},
 };
 
@@ -69,7 +69,7 @@ impl Search {
         let () = extend_env();
         let () = match check_credential_exist() {
             true => (),
-            false => return 
+            false => return,
         };
 
         match self.search_subcommand {

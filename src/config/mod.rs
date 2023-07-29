@@ -8,7 +8,6 @@ pub fn koto_base_dir() -> BaseDirectories {
         .unwrap_or_else(|e| panic!("Cannot create xdg dirs: {}", e))
 }
 
-
 pub fn extend_env() {
     let koto_dir = koto_base_dir();
     let path = match koto_dir.find_config_file(".env") {
