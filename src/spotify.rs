@@ -3,13 +3,14 @@
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, process::exit};
+use time::OffsetDateTime;
 use viuer::resize;
 
 use base64::encode;
 use reqwest::{RequestBuilder, StatusCode};
 use serde_json::Value;
 
-use crate::{sql::Date, util};
+use crate::util;
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -346,11 +347,9 @@ impl Spotify {
                 Some(0),
             )
             .await?;
-        album.items.sort_by(|a, b| {
-            let date1 = Date::from_str(&a.release_date).unwrap_or(Date::unix_epoch());
-            let date2 = Date::from_str(&b.release_date).unwrap_or(Date::unix_epoch());
-            date2.partial_cmp(&date1).unwrap()
-        });
+        album
+            .items
+            .sort_by(|a, b| a.release_date.partial_cmp(&b.release_date).unwrap());
         let items = album.items.remove(0);
         Some(items)
     }
@@ -470,7 +469,8 @@ pub struct Album {
     pub(crate) label: Option<Option<String>>,
     pub(crate) name: String,
     pub(crate) popularity: Option<Option<i32>>,
-    pub(crate) release_date: String,
+    #[serde(with = "time::serde::iso8601")]
+    pub(crate) release_date: OffsetDateTime,
     pub(crate) release_date_precision: String,
     pub(crate) total_tracks: u32,
     pub(crate) tracks: SpotifyAlbumTrackResult,
@@ -536,7 +536,8 @@ pub struct AlbumItems {
     pub(crate) id: String,
     pub(crate) images: Vec<HashMap<String, Value>>,
     pub(crate) name: String,
-    pub(crate) release_date: String,
+    #[serde(with = "time::serde::iso8601")]
+    pub(crate) release_date: OffsetDateTime,
     pub(crate) release_date_precision: String,
     pub(crate) total_tracks: u8,
     #[serde(rename = "type")]

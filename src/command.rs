@@ -187,7 +187,7 @@
 //             .args(&["artist", "album"])
 //             .conflicts_with("album-id")
 //             .requires_all(&["artist", "album"])
-            
+
 //     )) ]
 //     Fetch {
 //         /// Artist name

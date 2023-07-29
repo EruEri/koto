@@ -203,11 +203,11 @@ pub async fn cuesheet_from_album_id(
             let _ = cue_sheet.add_genre(&str_genres.as_str());
         }
     }
-    if let Some(date) = Date::from_str(&album.release_date) {
-        let mut str_date = date.year.to_string();
-        str_date.push('\0');
-        cue_sheet.add_rem("DATE\0", str_date.as_str());
-    }
+
+    let mut str_date = album.release_date.year().to_string();
+    str_date.push('\0');
+    cue_sheet.add_rem("DATE\0", str_date.as_str());
+
     album.tracks.items.iter().for_each(|track| {
         let mut cuetrack = cue_track::new_empty_track(
             track.track_number as i32,

@@ -16,7 +16,6 @@ use clap::{ArgGroup, Parser};
         .args(&["artist", "album"])
         .conflicts_with("album-id")
         .requires_all(&["artist", "album"])
-        
 )) ]
 pub struct CueSheetFetch {
     /// Artist name

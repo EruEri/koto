@@ -1,8 +1,11 @@
-use std::{env::current_dir, fs::OpenOptions, io::Write};
+use std::{fs::OpenOptions, io::Write};
 
 use clap::Parser;
 
-use crate::{config::{koto_base_dir, KOTO_NAME}, commands::list::db::Artists};
+use crate::{
+    commands::list::db::Artists,
+    config::{koto_base_dir, KOTO_NAME},
+};
 
 #[derive(Parser)]
 /// Init koto with the spotify client credentials
@@ -34,13 +37,6 @@ impl Init {
                 return;
             }
         }
-        let pwd = match current_dir() {
-            Ok(path) => path,
-            Err(e) => {
-                println!("{}", e);
-                return;
-            }
-        };
         let koto_dir = koto_base_dir();
         // let _config_path = match koto_dir.create_config_directory(&pwd) {
         //     Ok(path) => path,
@@ -63,22 +59,27 @@ impl Init {
             Err(e) => {
                 println!("Error {}", e);
                 return;
-            },
+            }
         };
         let db = Artists::default();
-        let mut file = match OpenOptions::new().create(true).truncate(true).write(true).open(db_path) {
+        let file = match OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(db_path)
+        {
             Ok(file) => file,
             Err(e) => {
                 println!("Error {}", e);
                 return;
-            },
+            }
         };
         let () = match serde_json::to_writer_pretty(file, &db) {
             Ok(()) => (),
             Err(e) => {
                 println!("Error {}", e);
                 return;
-            },
+            }
         };
         let env = match koto_dir.place_config_file(".env") {
             Ok(path) => path,

@@ -137,7 +137,7 @@
 //             artist_name VARCHAR(50),
 //             artist_spotify_id VARCHAR(30) NOT NULL UNIQUE ,
 //             last_album TINYTEXT,
-//             last_album_release_date DATE, 
+//             last_album_release_date DATE,
 //             last_album_spotify_id VARCHAR(30) NOT NULL UNIQUE
 //             , last_album_url TINYTEXT",
 //             [],
@@ -168,10 +168,10 @@
 //             println!("Unable to open the database to update");
 //             exit(1)
 //         });
-//         let result = database.execute( "INSERT INTO artist_table 
+//         let result = database.execute( "INSERT INTO artist_table
 //         (artist_name, artist_spotify_id, last_album, last_album_release_date, last_album_spotify_id, last_album_url)
 //         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-//          params![artist.artist_name, artist.artist_spotify_id, artist.last_album, 
+//          params![artist.artist_name, artist.artist_spotify_id, artist.last_album,
 //          artist.last_album_release_date, artist.last_album_spotify_id, artist.last_album_url
 //          ]);
 //         result
