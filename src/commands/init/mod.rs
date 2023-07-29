@@ -2,7 +2,7 @@ use std::{env::current_dir, fs::OpenOptions, io::Write};
 
 use clap::Parser;
 
-use crate::config::{koto_base_dir, KOTO_NAME};
+use crate::{config::{koto_base_dir, KOTO_NAME}, commands::list::db::Artists};
 
 #[derive(Parser)]
 /// Init koto with the spotify client credentials
@@ -42,20 +42,43 @@ impl Init {
             }
         };
         let koto_dir = koto_base_dir();
-        let _config_path = match koto_dir.create_config_directory(&pwd) {
-            Ok(path) => path,
-            Err(e) => {
-                println!("Error {}", e);
-                return;
-            }
-        };
+        // let _config_path = match koto_dir.create_config_directory(&pwd) {
+        //     Ok(path) => path,
+        //     Err(e) => {
+        //         println!("Error {}", e);
+        //         return;
+        //     }
+        // };
 
-        let _data_path = match koto_dir.create_data_directory(&pwd) {
-            Ok(path) => path,
+        // let _data_path = match koto_dir.create_data_directory(&pwd) {
+        //     Ok(path) => path,
+        //     Err(e) => {
+        //         println!("Error {}", e);
+        //         return;
+        //     }
+        // };
+
+        let db_path = match koto_dir.place_data_file("db.json") {
+            Ok(db_path) => db_path,
             Err(e) => {
                 println!("Error {}", e);
                 return;
-            }
+            },
+        };
+        let db = Artists::default();
+        let mut file = match OpenOptions::new().create(true).truncate(true).write(true).open(db_path) {
+            Ok(file) => file,
+            Err(e) => {
+                println!("Error {}", e);
+                return;
+            },
+        };
+        let () = match serde_json::to_writer_pretty(file, &db) {
+            Ok(()) => (),
+            Err(e) => {
+                println!("Error {}", e);
+                return;
+            },
         };
         let env = match koto_dir.place_config_file(".env") {
             Ok(path) => path,

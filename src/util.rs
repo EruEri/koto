@@ -8,7 +8,6 @@ use crate::{
         caml_wrapper_starup, cue_file_format, cue_sheet, cue_track, duration,
     },
     spotify::{self, Artist},
-    sql::Date,
 };
 
 pub fn convert_mille_to_duration(milliemes: u64) -> duration {

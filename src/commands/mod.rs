@@ -35,7 +35,7 @@ impl KotoSubcommands {
             KotoSubcommands::Edit(edit) => edit.run(),
             KotoSubcommands::Init(init) => init.run(),
             KotoSubcommands::Search(search) => search.run().await,
-            KotoSubcommands::List(list) => list.run(),
+            KotoSubcommands::List(list) => list.run().await,
         }
     }
 }
