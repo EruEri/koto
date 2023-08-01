@@ -3,8 +3,8 @@ use std::process::exit;
 use clap::{ArgGroup, Parser};
 
 use crate::{
-    spotify::{Spotify, SpotifyIncludeGroupe, SpotifySearchType},
-    util,
+    libs::spotify::{Spotify, SpotifyIncludeGroupe, SpotifySearchType},
+    libs::util,
 };
 
 /// Search content related to an artist
@@ -68,7 +68,7 @@ impl Artist {
                     exit(1)
                 });
             let items = result
-                .get(&crate::spotify::SpotifySearchKey::Artists)
+                .get(&crate::libs::spotify::SpotifySearchKey::Artists)
                 .unwrap_or_else(|| {
                     println!("Unable to get the artist");
                     exit(1)
@@ -77,7 +77,7 @@ impl Artist {
                 .items
                 .iter()
                 .filter_map(|ssri| match ssri {
-                    crate::spotify::SpotifySearchResultItem::Artist {
+                    crate::libs::spotify::SpotifySearchResultItem::Artist {
                         external_urls: _,
                         followers: _,
                         genres: _,

@@ -1,12 +1,10 @@
 use clap::StructOpt;
 use commands::Koto;
 
-
+mod bindings;
 pub mod commands;
 pub mod config;
-mod bindings;
-mod spotify;
-mod util;
+mod libs;
 
 #[tokio::main]
 async fn main() {

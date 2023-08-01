@@ -2,8 +2,8 @@ use std::process::exit;
 
 use crate::{
     bindings::libcuesheetmaker::cue_file_format,
-    spotify::{Spotify, SpotifySearchType},
-    util,
+    libs::spotify::{Spotify, SpotifySearchType},
+    libs::util,
 };
 use clap::{ArgGroup, Parser};
 
@@ -80,13 +80,13 @@ impl CueSheetFetch {
                 }
                 Some(result) => {
                     let data = result
-                        .get(&crate::spotify::SpotifySearchKey::Albums)
+                        .get(&crate::libs::spotify::SpotifySearchKey::Albums)
                         .unwrap_or_else(|| {
                             println!("Unable to fetch the artist");
                             exit(1)
                         });
                     data.items.iter().filter_map(|ssri| match ssri {
-                        crate::spotify::SpotifySearchResultItem::Album {
+                        crate::libs::spotify::SpotifySearchResultItem::Album {
                             album_type: _,
                             artists: _,
                             external_urls: _,

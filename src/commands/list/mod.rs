@@ -4,7 +4,7 @@ use clap::{ArgGroup, Parser};
 
 use crate::{
     config::{check_credential_exist, extend_env},
-    spotify::Spotify,
+    libs::spotify::Spotify,
 };
 
 use self::db::{Artist, Artists};

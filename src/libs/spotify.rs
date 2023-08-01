@@ -10,7 +10,7 @@ use base64::encode;
 use reqwest::{RequestBuilder, StatusCode};
 use serde_json::Value;
 
-use crate::util;
+use crate::libs::util;
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -365,12 +365,12 @@ impl Spotify {
                 None,
             )
             .await?;
-        let items = result.get(&crate::spotify::SpotifySearchKey::Artists)?;
+        let items = result.get(&crate::libs::spotify::SpotifySearchKey::Artists)?;
         let mut vec_artist_id = items
             .items
             .iter()
             .filter_map(|ssri| match ssri {
-                crate::spotify::SpotifySearchResultItem::Artist {
+                crate::libs::spotify::SpotifySearchResultItem::Artist {
                     external_urls,
                     followers,
                     genres,
@@ -1034,7 +1034,7 @@ impl SpotifySearchResult {
         let mut items_count = self.offset;
         for item in self.items.iter() {
             match item {
-                crate::spotify::SpotifySearchResultItem::Track { .. } => {
+                crate::libs::spotify::SpotifySearchResultItem::Track { .. } => {
                     if section_track {
                         print!("----------------------------------------\n");
                         print!("----------------------------------------\n");
@@ -1052,7 +1052,7 @@ impl SpotifySearchResult {
                         items_count = self.offset
                     }
                 }
-                crate::spotify::SpotifySearchResultItem::Artist { .. } => {
+                crate::libs::spotify::SpotifySearchResultItem::Artist { .. } => {
                     if section_artist {
                         print!("----------------------------------------\n");
                         print!("----------------------------------------\n");
@@ -1071,7 +1071,7 @@ impl SpotifySearchResult {
                         items_count = self.offset
                     }
                 }
-                crate::spotify::SpotifySearchResultItem::Album { .. } => {
+                crate::libs::spotify::SpotifySearchResultItem::Album { .. } => {
                     if section_album {
                         print!("----------------------------------------\n");
                         print!("----------------------------------------\n");

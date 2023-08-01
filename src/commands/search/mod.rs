@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 use crate::{
     config::{check_credential_exist, extend_env},
-    spotify::{Spotify, SpotifySearchType},
+    libs::spotify::{Spotify, SpotifySearchType},
 };
 
 pub mod album;

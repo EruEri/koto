@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 
 use crate::{
     config::{koto_base_dir, KOTO_DB_NAME},
-    spotify::{self, SpotifySearchResultItem, SpotifySearchType},
+    libs::spotify::{self, SpotifySearchResultItem, SpotifySearchType},
 };
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -45,7 +45,7 @@ impl Artist {
                         None,
                     )
                     .await?;
-                let artist = map.get(&crate::spotify::SpotifySearchKey::Artists)?;
+                let artist = map.get(&crate::libs::spotify::SpotifySearchKey::Artists)?;
                 let items = &artist.items;
                 let artist_id = items.iter().find_map(|rssri| match rssri {
                     SpotifySearchResultItem::Artist { id, .. } => Some(id.clone()),

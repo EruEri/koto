@@ -4,12 +4,11 @@ use chrono::Datelike;
 use image::DynamicImage;
 use viuer::Config;
 
-use crate::{
-    bindings::libcuesheetmaker::{
-        caml_wrapper_starup, cue_file_format, cue_sheet, cue_track, duration,
-    },
-    spotify::{self, Artist},
+use crate::bindings::libcuesheetmaker::{
+    caml_wrapper_starup, cue_file_format, cue_sheet, cue_track, duration,
 };
+
+use super::spotify;
 
 pub fn convert_mille_to_duration(milliemes: u64) -> duration {
     let secondes = milliemes / 1000;
@@ -49,7 +48,7 @@ pub(crate) fn show_image_config(image: &DynamicImage, config: &Config) -> Option
 }
 
 pub(crate) async fn display_related_artist(
-    artists: &Vec<Artist>,
+    artists: &Vec<super::spotify::Artist>,
     column: usize,
     limit: usize,
     graphic: bool,
@@ -59,7 +58,7 @@ pub(crate) async fn display_related_artist(
             .into_iter()
             .enumerate()
             .filter_map(|(index, a)| if index < limit { Some(a) } else { None })
-            .collect::<Vec<&Artist>>()
+            .collect::<Vec<&super::spotify::Artist>>()
     } else {
         artists.iter().map(|a| a).collect()
     };

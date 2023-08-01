@@ -4,7 +4,7 @@ use clap::Parser;
 
 use crate::{
     commands::list::db::Artists,
-    config::{koto_base_dir, KOTO_NAME, KOTO_ENV, KOTO_DB_NAME},
+    config::{koto_base_dir, KOTO_DB_NAME, KOTO_ENV, KOTO_NAME},
 };
 
 #[derive(Parser)]
