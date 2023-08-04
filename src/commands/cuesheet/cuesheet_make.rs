@@ -1,3 +1,20 @@
+// /////////////////////////////////////////////////////////////////////////////////////////////
+//                                                                                            //
+// This file is part of Koto: A holdall music program                                         //
+// Copyright (C) 2023 Yves Ndiaye                                                             //
+//                                                                                            //
+// Koto is free software: you can redistribute it and/or modify it under the terms            //
+// of the GNU General Public License as published by the Free Software Foundation,            //
+// either version 3 of the License, or (at your option) any later version.                    //
+//                                                                                            //
+// Koto is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;          //
+// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR           //
+// PURPOSE.  See the GNU General Public License for more details.                             //
+// You should have received a copy of the GNU General Public License along with Koto.         //
+// If not, see <http://www.gnu.org/licenses/>.                                                //
+//                                                                                            //
+// /////////////////////////////////////////////////////////////////////////////////////////////
+
 use std::io::{stdin, stdout, Write};
 
 use clap::{ArgEnum, Parser};
@@ -48,9 +65,9 @@ pub struct DurationFormatLocal(DurationFormat);
 pub struct CueDurationLocal(CueDuration);
 
 macro_rules! time_segment {
-    ($iter:expr) => { {
+    ($iter:expr) => {{
         let next = $iter.next();
-        match next{
+        match next {
             Some(u32) => u32.map_err(|_| CueDurationFormatError)?,
             None => return Err(CueDurationFormatError),
         }
@@ -67,7 +84,7 @@ impl std::str::FromStr for DurationFormatLocal {
     type Err = CueDurationFormatError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split(":").map(|time| { u32::from_str(time.trim())});
+        let mut iter = s.split(":").map(|time| u32::from_str(time.trim()));
         let minute = time_segment!(iter);
         let seconde = time_segment!(iter);
         let millieme = time_segment!(iter => None);
@@ -148,7 +165,9 @@ impl CueSheetMake {
             None => (),
         };
 
-        let _ = tracks.into_iter().for_each(|cuetrack| {cuesheet.add_track(cuetrack);});
+        let _ = tracks.into_iter().for_each(|cuetrack| {
+            cuesheet.add_track(cuetrack);
+        });
 
         let () = match output {
             Some(output) => match cuesheet.export(true, &output) {
