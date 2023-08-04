@@ -1,6 +1,7 @@
 use std::process::exit;
 
 use crate::{
+    config::{check_credential_exist, extend_env},
     libs::spotify::{Spotify, SpotifySearchType},
     libs::util,
 };
@@ -31,7 +32,7 @@ pub struct CueSheetFetch {
     #[clap(short, long, help = "Output file [stdout if not present]")]
     output: Option<String>,
 
-    #[clap(long, alias = "cfn", default_value = "")]
+    #[clap(long, alias = "cfn", default_value = "\"\"")]
     cue_file_name: String,
 
     #[clap(short, long, arg_enum)]
@@ -45,22 +46,22 @@ pub struct CueSheetFetch {
 }
 
 #[derive(Debug, Clone, Copy, ArgEnum)]
-enum CueFileFormatLocal {
-    LBINARY,
-    LMOTOROLA,
-    LAIFF,
-    LWAVE,
-    LMP3,
+pub(crate) enum CueFileFormatLocal {
+    BINARY,
+    MOTOROLA,
+    AIFF,
+    WAVE,
+    MP3,
 }
 
 impl CueFileFormatLocal {
     pub fn to_cuefileformat(&self) -> CueFileFormat {
         match self {
-            CueFileFormatLocal::LBINARY => CueFileFormat::BINARY,
-            CueFileFormatLocal::LMOTOROLA => CueFileFormat::MOTOROLA,
-            CueFileFormatLocal::LAIFF => CueFileFormat::AIFF,
-            CueFileFormatLocal::LWAVE => CueFileFormat::WAVE,
-            CueFileFormatLocal::LMP3 => CueFileFormat::MP3,
+            CueFileFormatLocal::BINARY => CueFileFormat::BINARY,
+            CueFileFormatLocal::MOTOROLA => CueFileFormat::MOTOROLA,
+            CueFileFormatLocal::AIFF => CueFileFormat::AIFF,
+            CueFileFormatLocal::WAVE => CueFileFormat::WAVE,
+            CueFileFormatLocal::MP3 => CueFileFormat::MP3,
         }
     }
 }
@@ -77,6 +78,11 @@ impl CueSheetFetch {
             total_duration,
             image,
         } = self;
+        let () = extend_env();
+        let () = match check_credential_exist() {
+            true => (),
+            false => return,
+        };
         let spotify = Spotify::init().await;
 
         let album_id = if let Some(id) = album_id {
