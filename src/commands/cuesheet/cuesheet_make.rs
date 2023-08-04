@@ -91,12 +91,14 @@ impl CueSheetMake {
     }
 
     fn ask_track(index: u32, track: &str) -> Option<CueTrack> {
-        let () = println!("{}:", track);
+        let () = println!("\n{}:", track);
         let index_str = Self::readline("timestamp (MM:SS) or (MM:SS:MM) : ");
         let duration_format = index_str.parse::<DurationFormatLocal>();
         let duration = duration_format.ok()?.0;
         let performer = Self::readline("Perfomer : ");
+        let performer = performer.trim();
         let composer = Self::readline("Composer : ");
+        let composer = composer.trim();
 
         let mut cuetrack = CueTrack::new(index, cuesheet_rs::CueTrackMode::AUDIO);
         let _ = cuetrack.add_index(1, duration);
@@ -137,7 +139,6 @@ impl CueSheetMake {
                     return;
                 }
             };
-            let () = println!("");
         };
         let _ = cuesheet.add_title(&title).add_performer(&performer);
         let () = match catalog {
@@ -159,7 +160,7 @@ impl CueSheetMake {
             },
             None => {
                 let s = cuesheet.repr(true);
-                println!("{}", s)
+                println!("\n\n{}", s)
             }
         };
     }
