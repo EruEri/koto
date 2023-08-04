@@ -1,5 +1,23 @@
+// /////////////////////////////////////////////////////////////////////////////////////////////
+//                                                                                            //
+// This file is part of Koto: A holdall music program                                         //
+// Copyright (C) 2023 Yves Ndiaye                                                             //
+//                                                                                            //
+// Koto is free software: you can redistribute it and/or modify it under the terms            //
+// of the GNU General Public License as published by the Free Software Foundation,            //
+// either version 3 of the License, or (at your option) any later version.                    //
+//                                                                                            //
+// Koto is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;          //
+// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR           //
+// PURPOSE.  See the GNU General Public License for more details.                             //
+// You should have received a copy of the GNU General Public License along with Koto.         //
+// If not, see <http://www.gnu.org/licenses/>.                                                //
+//                                                                                            //
+// /////////////////////////////////////////////////////////////////////////////////////////////
+
 #![allow(unused)]
 
+use chrono::NaiveDate;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, process::exit};
@@ -9,7 +27,7 @@ use base64::encode;
 use reqwest::{RequestBuilder, StatusCode};
 use serde_json::Value;
 
-use crate::{sql::Date, util};
+use crate::libs::util;
 
 #[derive(Debug, Clone)]
 pub struct Token {
@@ -256,15 +274,14 @@ impl Spotify {
 
     pub async fn album(&self, album_id: String) -> Option<Album> {
         let rb = self.setup_url_request(
-            &SpotifyRessourceType::Album, vec![album_id], 
-            None, None, None, vec![]);
-            rb.
-            send()
-            .await
-            .ok()?
-            .json()
-            .await
-            .ok()
+            &SpotifyRessourceType::Album,
+            vec![album_id],
+            None,
+            None,
+            None,
+            vec![],
+        );
+        rb.send().await.ok()?.json().await.ok()
     }
 
     pub async fn _artists(&self, artist_ids: Vec<String>) -> Option<Vec<Value>> {
@@ -291,13 +308,7 @@ impl Spotify {
             None,
             vec![],
         );
-        rb
-        .send()
-        .await
-        .ok()?
-        .json()
-        .await
-        .ok()
+        rb.send().await.ok()?.json().await.ok()
     }
     pub async fn artist_album(
         &self,
@@ -353,11 +364,9 @@ impl Spotify {
                 Some(0),
             )
             .await?;
-        album.items.sort_by(|a, b| {
-            let date1 = Date::from_str(&a.release_date).unwrap_or(Date::unix_epoch());
-            let date2 = Date::from_str(&b.release_date).unwrap_or(Date::unix_epoch());
-            date2.partial_cmp(&date1).unwrap()
-        });
+        album
+            .items
+            .sort_by(|a, b| a.release_date.partial_cmp(&b.release_date).unwrap());
         let items = album.items.remove(0);
         Some(items)
     }
@@ -373,12 +382,12 @@ impl Spotify {
                 None,
             )
             .await?;
-        let items = result.get(&crate::spotify::SpotifySearchKey::Artists)?;
+        let items = result.get(&crate::libs::spotify::SpotifySearchKey::Artists)?;
         let mut vec_artist_id = items
             .items
             .iter()
             .filter_map(|ssri| match ssri {
-                crate::spotify::SpotifySearchResultItem::Artist {
+                crate::libs::spotify::SpotifySearchResultItem::Artist {
                     external_urls,
                     followers,
                     genres,
@@ -454,34 +463,34 @@ impl Display for SpotifySearchType {
 pub struct Copyrights {
     text: String,
     #[serde(rename = "type")]
-    c_type: String
+    c_type: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Album {
     pub(crate) album_type: String,
     pub(crate) artists: Vec<SpotifySearchAlbumArtist>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) available_markets: Option<Option<Vec<String>>>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) copyrights: Option<Option<Vec<Copyrights>>>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) external_ids: Option<Option<HashMap<String, String>>>,
     pub(crate) external_urls: HashMap<String, String>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) genres: Option<Option<Vec<String>>>,
     pub(crate) href: String,
     pub(crate) id: String,
     pub(crate) images: Vec<HashMap<String, Value>>,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) label: Option<Option<String>>,
     pub(crate) name: String,
     pub(crate) popularity: Option<Option<i32>>,
-    pub(crate) release_date: String,
+    pub(crate) release_date: NaiveDate,
     pub(crate) release_date_precision: String,
     pub(crate) total_tracks: u32,
     pub(crate) tracks: SpotifyAlbumTrackResult,
-    #[serde(default, with="serde_with::rust::double_option")]
+    #[serde(default, with = "serde_with::rust::double_option")]
     pub(crate) restrictions: Option<Option<HashMap<String, Value>>>,
     #[serde(rename = "type")]
     pub(crate) a_type: String,
@@ -543,7 +552,7 @@ pub struct AlbumItems {
     pub(crate) id: String,
     pub(crate) images: Vec<HashMap<String, Value>>,
     pub(crate) name: String,
-    pub(crate) release_date: String,
+    pub(crate) release_date: NaiveDate,
     pub(crate) release_date_precision: String,
     pub(crate) total_tracks: u8,
     #[serde(rename = "type")]
@@ -624,7 +633,7 @@ pub struct TrackAlbum {
     pub(crate) track_number: u16,
     #[serde(rename = "type")]
     pub(crate) _type: String,
-    pub(crate) uri: String
+    pub(crate) uri: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -823,21 +832,9 @@ impl SpotifySearchResultItem {
             SpotifySearchResultItem::Track {
                 album,
                 artists,
-                available_markets: _,
-                disc_number: _,
-                duration_ms: _,
-                explicit: _,
-                external_ids: _,
-                external_urls: _,
-                href: _,
                 id,
-                is_local: _,
                 name,
-                popularity: _,
-                preview_url: _,
-                track_number: _,
-                t_type: _,
-                uri: _,
+                ..
             } => {
                 print!("****   Song Name   : {}\n", name);
                 print!("****   Song ID     : {}\n", id);
@@ -1054,7 +1051,7 @@ impl SpotifySearchResult {
         let mut items_count = self.offset;
         for item in self.items.iter() {
             match item {
-                crate::spotify::SpotifySearchResultItem::Track { .. } => {
+                crate::libs::spotify::SpotifySearchResultItem::Track { .. } => {
                     if section_track {
                         print!("----------------------------------------\n");
                         print!("----------------------------------------\n");
@@ -1072,7 +1069,7 @@ impl SpotifySearchResult {
                         items_count = self.offset
                     }
                 }
-                crate::spotify::SpotifySearchResultItem::Artist { .. } => {
+                crate::libs::spotify::SpotifySearchResultItem::Artist { .. } => {
                     if section_artist {
                         print!("----------------------------------------\n");
                         print!("----------------------------------------\n");
@@ -1091,7 +1088,7 @@ impl SpotifySearchResult {
                         items_count = self.offset
                     }
                 }
-                crate::spotify::SpotifySearchResultItem::Album { .. } => {
+                crate::libs::spotify::SpotifySearchResultItem::Album { .. } => {
                     if section_album {
                         print!("----------------------------------------\n");
                         print!("----------------------------------------\n");

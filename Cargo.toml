@@ -1,22 +1,25 @@
 [package]
 name = "koto"
-version = "0.1.0"
+version = "0.4.0"
 edition = "2021"
-build = "build.rs"
+authors = ["EruEri"]
+license = "GPL-3.0"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 reqwest = {version = "0.11.9", features = ["json"] }
+xdg = "2.5.2"
 dotenv = "0.15.0"
 serde_json = "1.0.78"
 serde = { version = "1.0.78", features = ["derive"] }
 base64 = "0.13.0"
 tokio = {version = "1.14.0", features = ["full"] }
 clap = {version = "3.1.6", features=["derive"]} 
-rusqlite = "0.26.3"
 serde_with = "1.11.0"
 tag_edit = {git = "https://github.com/EruEri/tag_edit", tag = "v0.2.1"}
 viuer = "0.6"
 image = "0.24.1"
+chrono = { version = "0.4.26", features = ["serde"]}
+cuesheet-rs = {git = "https://github.com/EruEri/cuesheet-rs", rev = "cb143f1d0e229d69bf8e6ba34f9f433c079a17d7"}

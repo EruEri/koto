@@ -15,15 +15,14 @@
 //                                                                                            //
 // /////////////////////////////////////////////////////////////////////////////////////////////
 
-use clap::StructOpt;
-use commands::Koto;
+use clap::Parser;
 
-pub mod commands;
-pub mod config;
-mod libs;
+/// Search content related to an artist
+#[derive(Debug, Parser)]
+pub struct Track {}
 
-#[tokio::main]
-async fn main() {
-    let koto = Koto::parse();
-    koto.run().await
+impl Track {
+    pub async fn run(self) {
+        unimplemented!("TRACK TODO")
+    }
 }

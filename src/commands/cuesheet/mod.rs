@@ -15,15 +15,23 @@
 //                                                                                            //
 // /////////////////////////////////////////////////////////////////////////////////////////////
 
-use clap::StructOpt;
-use commands::Koto;
+use clap::Subcommand;
 
-pub mod commands;
-pub mod config;
-mod libs;
+pub mod cuesheet_fetch;
+pub mod cuesheet_make;
 
-#[tokio::main]
-async fn main() {
-    let koto = Koto::parse();
-    koto.run().await
+#[derive(Subcommand)]
+/// Create cue sheet
+pub enum CueSheetSubcommand {
+    Fetch(cuesheet_fetch::CueSheetFetch),
+    Make(cuesheet_make::CueSheetMake),
+}
+
+impl CueSheetSubcommand {
+    pub async fn run(self) {
+        match self {
+            CueSheetSubcommand::Fetch(fetch) => fetch.run().await,
+            CueSheetSubcommand::Make(make) => make.run(),
+        }
+    }
 }
