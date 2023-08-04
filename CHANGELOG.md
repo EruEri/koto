@@ -1,11 +1,11 @@
 # CHANGELOG
 
 ## 0.4.0
-- Cuesheet Make (command)
-- Revome C/ OCaml dependency (100% rust)
+- Cuesheet Make (subcommand)
+- Revome C/ OCaml dependencies (100% rust)
 - Refacto code structure
 - Move to Xdg base directory
-- Remove sql to json
+- Remove sql db, Move to json
 
 ## 0.3.6
 - Create-m3U playlist
