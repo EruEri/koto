@@ -21,7 +21,7 @@ pub mod cuesheet_fetch;
 pub mod cuesheet_make;
 
 #[derive(Subcommand)]
-/// Create the cue sheet by fechting the requiered information on the spotify api
+/// Create cue sheet
 pub enum CueSheetSubcommand {
     Fetch(cuesheet_fetch::CueSheetFetch),
     Make(cuesheet_make::CueSheetMake),
