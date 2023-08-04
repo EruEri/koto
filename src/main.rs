@@ -1,7 +1,6 @@
 use clap::StructOpt;
 use commands::Koto;
 
-mod bindings;
 pub mod commands;
 pub mod config;
 mod libs;

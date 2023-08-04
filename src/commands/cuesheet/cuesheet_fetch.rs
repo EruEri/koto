@@ -1,11 +1,11 @@
 use std::process::exit;
 
 use crate::{
-    bindings::libcuesheetmaker::cue_file_format,
     libs::spotify::{Spotify, SpotifySearchType},
     libs::util,
 };
-use clap::{ArgGroup, Parser};
+use clap::{ArgEnum, ArgGroup, Parser};
+use cuesheet_rs::CueFileFormat;
 
 #[derive(Parser)]
 /// Create the cue sheet by fechting the requiered information on the spotify api
@@ -35,13 +35,34 @@ pub struct CueSheetFetch {
     cue_file_name: String,
 
     #[clap(short, long, arg_enum)]
-    format: cue_file_format,
+    format: CueFileFormatLocal,
     /// Display album total duration
     #[clap(long)]
     total_duration: bool,
     /// output path where fetched album illustration will be created
     #[clap(short, long)]
     image: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, ArgEnum)]
+enum CueFileFormatLocal {
+    LBINARY,
+    LMOTOROLA,
+    LAIFF,
+    LWAVE,
+    LMP3,
+}
+
+impl CueFileFormatLocal {
+    pub fn to_cuefileformat(&self) -> CueFileFormat {
+        match self {
+            CueFileFormatLocal::LBINARY => CueFileFormat::BINARY,
+            CueFileFormatLocal::LMOTOROLA => CueFileFormat::MOTOROLA,
+            CueFileFormatLocal::LAIFF => CueFileFormat::AIFF,
+            CueFileFormatLocal::LWAVE => CueFileFormat::WAVE,
+            CueFileFormatLocal::LMP3 => CueFileFormat::MP3,
+        }
+    }
 }
 
 impl CueSheetFetch {
@@ -115,7 +136,7 @@ impl CueSheetFetch {
         };
         if let Err(e) = util::cuesheet_from_album_id(
             cue_file_name,
-            format,
+            format.to_cuefileformat(),
             output,
             album_id.as_str(),
             total_duration,
