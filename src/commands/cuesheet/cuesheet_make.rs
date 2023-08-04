@@ -26,7 +26,7 @@ pub struct CueSheetMake {
     #[clap(short, long)]
     performer: String,
 
-    #[clap(long, alias = "cfn", default_value = "\"\"")]
+    #[clap(long, alias = "cfn", default_value = "")]
     cue_file_name: String,
 
     #[clap(short, long, arg_enum)]
@@ -48,12 +48,13 @@ pub struct DurationFormatLocal(DurationFormat);
 pub struct CueDurationLocal(CueDuration);
 
 macro_rules! time_segment {
-    ($iter:expr) => {
-        match $iter.next() {
+    ($iter:expr) => { {
+        let next = $iter.next();
+        match next{
             Some(u32) => u32.map_err(|_| CueDurationFormatError)?,
             None => return Err(CueDurationFormatError),
         }
-    };
+    }};
     ($iter:expr => $d:expr) => {
         match $iter.next() {
             Some(u32) => Some(u32.map_err(|_| CueDurationFormatError)?),
@@ -66,7 +67,7 @@ impl std::str::FromStr for DurationFormatLocal {
     type Err = CueDurationFormatError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split(":").map(|time| u32::from_str(time));
+        let mut iter = s.split(":").map(|time| { u32::from_str(time.trim())});
         let minute = time_segment!(iter);
         let seconde = time_segment!(iter);
         let millieme = time_segment!(iter => None);
@@ -129,13 +130,14 @@ impl CueSheetMake {
         let mut tracks = vec![];
         let () = for (index, name) in tracks_name.into_iter().enumerate() {
             let cueopt = Self::ask_track(index as u32, &name);
-            match cueopt {
+            let () = match cueopt {
                 Some(cue) => tracks.push(cue),
                 None => {
                     let () = println!("Failing to parse for {}", &name);
                     return;
                 }
-            }
+            };
+            let () = println!("");
         };
         let _ = cuesheet.add_title(&title).add_performer(&performer);
         let () = match catalog {
@@ -144,6 +146,9 @@ impl CueSheetMake {
             }
             None => (),
         };
+
+        let _ = tracks.into_iter().for_each(|cuetrack| {cuesheet.add_track(cuetrack);});
+
         let () = match output {
             Some(output) => match cuesheet.export(true, &output) {
                 Ok(()) => (),
