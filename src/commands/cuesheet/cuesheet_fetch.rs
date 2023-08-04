@@ -49,6 +49,7 @@ pub struct CueSheetFetch {
     #[clap(short, long, help = "Output file [stdout if not present]")]
     output: Option<String>,
 
+    /// file that the cue describe
     #[clap(long, alias = "cfn", default_value = "\"\"")]
     cue_file_name: String,
 

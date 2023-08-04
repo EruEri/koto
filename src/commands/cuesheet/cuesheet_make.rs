@@ -40,11 +40,17 @@ pub struct CueSheetMake {
     #[clap(short, long)]
     title: String,
 
+    /// Album perfomer
     #[clap(short, long)]
     performer: String,
 
+    /// file that the cue sheet describes
     #[clap(long, alias = "cfn", default_value = "")]
     cue_file_name: String,
+
+    /// Album date
+    #[clap(short, long)]
+    date: Option<String>,
 
     #[clap(short, long, arg_enum)]
     format: CueFileFormatLocal,
@@ -119,6 +125,7 @@ impl CueSheetMake {
 
         let mut cuetrack = CueTrack::new(index, cuesheet_rs::CueTrackMode::AUDIO);
         let _ = cuetrack.add_index(1, duration);
+        let _ = cuetrack.add_title(track.trim());
         let () = match performer.is_empty() {
             true => (),
             false => {
@@ -143,6 +150,7 @@ impl CueSheetMake {
             performer,
             cue_file_name,
             format,
+            date,
             tracks_name,
         } = self;
         let mut cuesheet = cuesheet_rs::CueSheet::new(&cue_file_name, format.to_cuefileformat());
@@ -161,6 +169,13 @@ impl CueSheetMake {
         let () = match catalog {
             Some(cata) => {
                 let _ = cuesheet.add_catalog(&cata);
+            }
+            None => (),
+        };
+
+        let () = match date {
+            Some(date) => {
+                let _ = cuesheet.add_rem("DATE", &date);
             }
             None => (),
         };
