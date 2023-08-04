@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.4.1
+- Cuesheet Make:
+    - add Date option
+    - Fix missing track title in cuesheet
+
 ## 0.4.0
 - Cuesheet Make (subcommand)
 - Revome C/ OCaml dependencies (100% rust)
