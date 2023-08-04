@@ -17,7 +17,6 @@ serde = { version = "1.0.78", features = ["derive"] }
 base64 = "0.13.0"
 tokio = {version = "1.14.0", features = ["full"] }
 clap = {version = "3.1.6", features=["derive"]} 
-rusqlite = "0.26.3"
 serde_with = "1.11.0"
 tag_edit = {git = "https://github.com/EruEri/tag_edit", tag = "v0.2.1"}
 viuer = "0.6"
